@@ -57,6 +57,7 @@ sp_har <- bind_rows(sp_har, nass_sp_har) |>
   filter(!is.na(spwn))|>
   mutate_if(is.numeric, round, 0)
 
+
 #check timeseries of complete dataset
 A_obs |>
   group_by(CU) |>
@@ -66,6 +67,7 @@ sp_har |>
   group_by(CU) |>
   summarise(min(year), max(year))
 
+if(FALSE){
 #merge and filter dfs so they have complete years of data among CUs
   # could make this robust depending on our final data... 
 sp_har <- left_join(sp_har, A_obs) |> 
@@ -73,15 +75,24 @@ sp_har <- left_join(sp_har, A_obs) |>
   mutate(spwn_cv = 0.5, #assumed CVs for now
          harv_cv = 0.3) |>
   as.data.frame()
+}
 
 #calc other indicies
 a_min <- 4
 a_max <- 6
-nyrs <- max(sp_har$year)-min(sp_har$year)+1 #number of years of observations
 A <- a_max - a_min + 1 #total age classes
-nRyrs <- nyrs + A - 1 #number of recruitment years: unobserved age classes at ? to predict last year of spawners
+
+#nyrs <- max(sp_har$year)-min(sp_har$year)+1 #number of years of observations
+#nRyrs <- nyrs + A - 1 #number of recruitment years: unobserved age classes at ? to predict last year of spawners
+
+yrs <- sp_har |>
+  group_by(CU) |>
+  summarise(nyrs = max(year)-min(year)+1, 
+            nRyrs = nyrs + A - 1)
 
 rm(A_obs, a_obs, nass_Aobs, nass_sp_har, skeena, i)
+
+
 
 # functions ------------------------------------------------------------------------------
 load <- base::load # make sure renv::load() does not mask base::load()
