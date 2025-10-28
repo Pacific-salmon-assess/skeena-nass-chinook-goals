@@ -15,14 +15,16 @@ if(refit == TRUE){
     
     sp_har1 <- filter(sp_har, CU == i)
     
+    yrs1 <- filter(yrs, CU == i)
+    
     A_obs1 <- select(sp_har1, a4:a6) |>
       as.matrix()
     
-    stan.data <- list("nyrs" = nyrs,
+    stan.data <- list("nyrs" = yrs1$nyrs,
                       "a_min" = a_min,
                       "a_max" = a_max,
                       "A" = A,
-                      "nRyrs" = nRyrs,
+                      "nRyrs" = yrs1$nRyrs,
                       "A_obs" = A_obs1,
                       "S_obs" = sp_har1$spwn,
                       "H_obs" = sp_har1$harv,
@@ -31,14 +33,14 @@ if(refit == TRUE){
                       "Smax_p" = 0.75*max(sp_har1$spwn), #data for priors in semi_inform models, can tinker based on what assumed Smax is
                       "Smax_p_sig" = 0.75*max(sp_har1$spwn))
     
-    #AR1.fit <- stan(file = here("Stan/SS-SR_AR1.stan"),
-    #                data = stan.data,
-    #                cores = 4,
-    #                seed = 2,
-    #                iter = 4000)
+    AR1.fit <- stan(file = here("Stan/SS-SR_AR1.stan"),
+                    data = stan.data,
+                    cores = 4,
+                    seed = 2,
+                    iter = 4000)
     
-    #saveRDS(AR1.fit, here("data/generated/model_fits/AR1",
-    #                      paste0(i, "_AR1.rds")))
+    saveRDS(AR1.fit, here("data/generated/model_fits/AR1",
+                          paste0(i, "_AR1.rds")))
     
     TV.fit <- stan(file = here("Stan/SS-SR_TVA.stan"),
                    data = stan.data,
