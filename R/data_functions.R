@@ -67,15 +67,15 @@ sp_har |>
   group_by(CU) |>
   summarise(min(year), max(year))
 
-if(FALSE){
 #merge and filter dfs so they have complete years of data among CUs
   # could make this robust depending on our final data... 
 sp_har <- left_join(sp_har, A_obs) |> 
-  filter(year>=1992 & year<= 2019) |>
+  filter(!is.na(a4)) |> #remove NAs once joined
+#  filter(year>=1992 & year<= 2019) |> #turn on if only doing even years
   mutate(spwn_cv = 0.5, #assumed CVs for now
          harv_cv = 0.3) |>
   as.data.frame()
-}
+
 
 #calc other indicies
 a_min <- 4
