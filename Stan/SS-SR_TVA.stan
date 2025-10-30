@@ -37,7 +37,7 @@ transformed parameters{
   vector[nRyrs] lnRm_1;                 // log recruitment states in absence of lag-one correlation //DO I NEED THIS
   matrix<lower=0>[nyrs, A] N_ta;        // returns by age matrix
   matrix<lower=0, upper=1>[nRyrs, A] p; // age at maturity proportions
-  vector<lower=0,upper=1>[4] pi;        // maturity schedule probs
+  vector<lower=0,upper=1>[A] pi;        // maturity schedule probs
   real<lower=0> D_sum;                  // inverse of D_scale which governs variability of age proportion vectors across cohorts
   vector<lower=0>[A] Dir_alpha;         // Dirichlet shape parameter for gamma distribution used to generate vector of age-at-maturity proportions
   matrix<lower=0, upper=1>[nyrs, A] q;  // age composition by year/age classr matrix
