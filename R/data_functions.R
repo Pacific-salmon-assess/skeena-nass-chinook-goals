@@ -50,8 +50,9 @@ nass_sp_har <- read.csv(here("data/Nass_SpHar.csv"))
 
 #bind skeena and nass
 A_obs <- bind_rows(A_obs, nass_Aobs) |>
-  filter(!is.na(a4))|>        #hope a4 alone is representative of NA rows
+  filter(!is.na(a4))|>  #hope a4 is representative of NA rows - be sure to check
   mutate_if(is.numeric, round, 0)
+  
   
 sp_har <- bind_rows(sp_har, nass_sp_har) |>
   filter(!is.na(spwn))|>
@@ -71,19 +72,15 @@ sp_har |>
   # could make this robust depending on our final data... 
 sp_har <- left_join(sp_har, A_obs) |> 
   filter(!is.na(a4)) |> #remove NAs once joined
-#  filter(year>=1992 & year<= 2019) |> #turn on if only doing even years
   mutate(spwn_cv = 0.5, #assumed CVs for now
          harv_cv = 0.3) |>
+  arrange(CU, year) |>
   as.data.frame()
-
 
 #calc other indicies
 a_min <- 4
 a_max <- 6
 A <- a_max - a_min + 1 #total age classes
-
-#nyrs <- max(sp_har$year)-min(sp_har$year)+1 #number of years of observations
-#nRyrs <- nyrs + A - 1 #number of recruitment years: unobserved age classes at ? to predict last year of spawners
 
 yrs <- sp_har |>
   group_by(CU) |>
@@ -91,7 +88,6 @@ yrs <- sp_har |>
             nRyrs = nyrs + A - 1)
 
 rm(A_obs, a_obs, nass_Aobs, nass_sp_har, skeena, i)
-
 
 
 # functions ------------------------------------------------------------------------------
