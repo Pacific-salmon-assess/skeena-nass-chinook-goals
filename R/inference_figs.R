@@ -402,16 +402,88 @@ ggplot() +
         legend.title = element_text(size=9),
         legend.text = element_text(size=8))
 
-my.ggsave(here("plots/TV_SR_fits.PNG"))
+tmy.ggsave(here("plots/TV_SR_fits.PNG"))
 
 # deleted yukon code below this fig. To see more look here 
 # (https://github.com/Pacific-salmon-assess/yukon-CK-ResDoc/blob/main/analysis/R/inference_figs.R#L383)
 
-# "status" plots ----
 
-# escapement plot ----
+#post hoc plots for skeena
 
-# Add benchmarks
+#latent states ---
+AR1.obs <- AR1.harv |>
+  mutate(obs = "Harvest") |>
+  rename(S.25 = H.25, 
+         S.50 = H.50, 
+         S.75 = H.75) |>
+  bind_rows(AR1.spwn) |> 
+  mutate(obs = ifelse(is.na(obs), "Spawners", obs))
+colnames(AR1.obs) <- c("p.25", "p.50", "p.75", "year", "CU", "obs")
 
+#Skeena
+ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")))) +
+  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000, fill = CU), alpha = 0.2) +
+  geom_line(aes(x = year, y = p.50/1000, color = CU)) +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d() +
+  facet_wrap(~obs, nrow = 2, scales = "free") +
+  labs(x = "Brood year", y = "Fish (thousands)") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size=9),
+        legend.text = element_text(size=8))
+  
+my.ggsave(here("plots/Skeena/sp_har_obs.PNG"))
 
+#Nass
+ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Upper Nass"))) +
+  geom_line(aes(x = year, y = p.50/1000, color = CU), lwd=1) +
+  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000, fill = CU), alpha = 0.2) +
+  scale_color_viridis_d(end = 0.6) +
+  scale_fill_viridis_d(end = 0.6) +
+  facet_wrap(~obs, nrow = 2, scales = "free") +
+  labs(x = "Brood year", y = "Fish (thousands)") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+my.ggsave(here("plots/Nass/sp_har_obs.PNG"))
+
+#plot A_obs 
+A_plot <- sp_har |>
+  select(CU, year, a4, a5, a6) |>
+  pivot_longer(cols = a4:a6)
+
+ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+       aes(x=year, y=value/100)) +
+  geom_line() +
+  facet_grid(CU~name) +
+  scale_color_viridis_d() +
+  labs(x = "Return year", y = "Proportion at age") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+#better option
+#Skeena
+ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+       aes(x=year, y=value/100, fill = name)) +
+  geom_area(alpha = 0.8) +  
+  theme_minimal() +
+  facet_wrap(~CU) +
+  scale_fill_viridis_d(name = "Age class") +
+  labs(x = "Return year", y = "Proportion at age")
+
+my.ggsave(here("plots/Skeena/A_obs.PNG"))
+
+#Nass
+ggplot(filter(A_plot, CU %in% c("Lower Nass", "Upper Nass")), 
+       aes(x=year, y=value/100, fill = name)) +
+  geom_area(alpha = 0.8) +  
+  theme_minimal() +
+  facet_wrap(~CU) +
+  scale_fill_viridis_d(name = "Age class") +
+  labs(x = "Return year", y = "Proportion at age")
+
+my.ggsave(here("plots/Nass/A_obs.PNG"))
 
