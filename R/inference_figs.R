@@ -251,7 +251,7 @@ bench.par.table.out <- bench.par.table |> # AR1 SR model pars and benchmarks
   mutate_at(3:7, ~round(.,5)) |>
   arrange(bench.par, CU)
 
-bench.par.table.out[73:80,3:6] <- bench.par.table.out[73:80,3:6]*10000 # transform beta - do it better
+bench.par.table.out[73:80,3:6] <- bench.par.table.out[73:80,3:6]*10000 ## transform beta - do it better?
 
 write.csv(bench.par.table.out, here("data/generated/bench_par_table.csv"),
           row.names = FALSE)
@@ -275,37 +275,53 @@ write.csv(a.yrs.all, here("data/generated/spw_TVA.csv"),
 # make key plots for pub -----------------------------------------------------------------
 
 # SR fits ----
+#Skeena
 ggplot() +
   geom_abline(intercept = 0, slope = 1,col="dark grey") +
-  geom_ribbon(data = SR.preds, aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
+  geom_ribbon(data = filter(SR.preds, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+              aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
               fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
-  geom_errorbar(data = brood.all, aes(x= S_med/1000, y = R_med/1000,
-                                      ymin = R_lwr/1000, ymax = R_upr/1000),
+  geom_errorbar(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+                aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
                 colour="grey", width=0, linewidth=0.3) +
-  geom_errorbarh(data = brood.all, aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
+  geom_errorbarh(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+                 aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
                  height=0, colour = "grey", linewidth = 0.3) +
-  geom_point(data = brood.all,
-             aes(x = S_med/1000,
-                 y = R_med/1000,
-                 color=BroodYear),
-             size = 1.5) +
-  geom_line(data = SR.preds, aes(x = Spawn/1000, y = Rec_med/1000)) +
-  facet_wrap(~CU, scales = "free") +#, labeller=CU_labeller) +
+  geom_point(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))),
+             aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
+  geom_line(data = filter(SR.preds, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+            aes(x = Spawn/1000, y = Rec_med/1000)) +
+  facet_wrap(~CU, scales = "free") +
   scale_colour_viridis_c(name = "Brood Year")+
-  labs(x = "Spawners (000s)",
-       y = "Recruits (000s)") +
-#  theme_sleek()+
-  theme(legend.position = c(0.94,0.025),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.25, "cm"),
-        legend.title = element_text(size=7, vjust=3),
-        legend.text = element_text(size=6, angle=0, hjust=0),
-        strip.text = element_text(size=10))
+  labs(x = "Spawners (000s)", y = "Recruits (000s)") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 
-my.ggsave(here("plots/SR_fits_AR1.PNG"))
-#ggsave(here("csasdown/figure/SR_fits_AR1.PNG"), height=800*2, width=900*2, units="px", dpi=240)
+my.ggsave(here("plots/Skeena/SR_fits_AR1.PNG"))
 
+#Nass
+ggplot() +
+  geom_abline(intercept = 0, slope = 1,col="dark grey") +
+  geom_ribbon(data = filter(SR.preds, CU %in% c("Lower Nass", "Upper Nass")), 
+              aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
+              fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
+  geom_errorbar(data = filter(brood.all, CU %in% c("Lower Nass", "Upper Nass")), 
+                aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
+                colour="grey", width=0, linewidth=0.3) +
+  geom_errorbarh(data = filter(brood.all, CU %in% c("Lower Nass", "Upper Nass")), 
+                 aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
+                 height=0, colour = "grey", linewidth = 0.3) +
+  geom_point(data = filter(brood.all, CU %in% c("Lower Nass", "Upper Nass")),
+             aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
+  geom_line(data = filter(SR.preds, CU %in% c("Lower Nass", "Upper Nass")), 
+            aes(x = Spawn/1000, y = Rec_med/1000)) +
+  facet_wrap(~CU, scales = "free") +
+  scale_colour_viridis_c(name = "Brood Year")+
+  labs(x = "Spawners (000s)", y = "Recruits (000s)") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+my.ggsave(here("plots/Nass/SR_fits_AR1.PNG"))
 
 # AR1 resids ----
 ggplot(AR1.resids, aes(x=year, y = mid)) +
@@ -324,6 +340,7 @@ ggplot(AR1.resids, aes(x=year, y = mid)) +
 my.ggsave(here("plots/AR1_resids.PNG"))
 
 # TV resids ----
+# Skeena
 ggplot(TV.resids, aes(x=year, y = mid)) +
   geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "darkgrey", alpha = 0.5) +
   geom_ribbon(aes(ymin = midlwr, ymax = midupr),  fill = "black", alpha=0.2) +
@@ -339,17 +356,31 @@ ggplot(TV.resids, aes(x=year, y = mid)) +
 my.ggsave(here("plots/TV_resids.PNG"))
 
 # TV alpha ----
+#Skeena
 a.yrs.all |>
-  filter(brood_year < 2018) |>
+  filter(brood_year < 2018) |> ## why?
+  filter(!(CU %in% c("Lower Nass", "Upper Nass"))) |>
   ggplot(aes(color=CU)) +
   geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
   scale_color_viridis_d() +
-#  theme_sleek() +
   geom_hline(yintercept = 1, lty=2, col = "grey") +
   labs(y ="Productivity (\U03B1)", x = "Brood year")+
   guides(color=guide_legend(title="Conservation Unit"))
 
-my.ggsave(here("plots/changing_productivity.PNG"))
+my.ggsave(here("plots/Skeena/changing_productivity.PNG"))
+
+#Nass
+a.yrs.all |>
+  filter(brood_year < 2018) |> ## why?
+  filter(CU %in% c("Lower Nass", "Upper Nass")) |>
+  ggplot(aes(color=CU)) +
+  geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
+  scale_color_viridis_d() +
+  geom_hline(yintercept = 1, lty=2, col = "grey") +
+  labs(y ="Productivity (\U03B1)", x = "Brood year")+
+  guides(color=guide_legend(title="Conservation Unit"))
+
+my.ggsave(here("plots/Nass/changing_productivity.PNG"))
 
 # TV SR fits ----
 ggplot() +
