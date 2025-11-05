@@ -31,6 +31,7 @@ tva.par.summary.out <- NULL
 SR.preds <- NULL
 AR1.spwn <- NULL
 AR1.harv <- NULL
+AR1.ages <- NULL
 AR1.resids <- NULL
 brood.all <- NULL
 brood.all.long <- NULL
@@ -90,6 +91,19 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   par <- matrix(NA,length(sub_pars$lnalpha),3,
                 dimnames = list(seq(1:length(sub_pars$lnalpha)), c("sample","ln_a","beta")))
   
+  #latent states of proportions at age --- 
+  if(TRUE){
+  sub_age <- NULL
+  for(j in 1:A){ #SO JANKY
+    sub_age <- bind_rows(sub_age, 
+                         data.frame(t(apply(sub_pars$p[,,j], 2, quantile, probs=c(0.25,0.5,0.75))), 
+                         age = j+a_min-1, 
+                         year = (min(sub_dat$year)-2):max(sub_dat$year), 
+                         CU = i))
+  }
+  
+  AR1.ages <- bind_rows(AR1.ages, sub_age)
+  }
   # get benchmarks & pars (AR1 model)------------------------------------------------------------------
   
   for(j in 1:length(sub_pars$lnalpha)){
@@ -225,23 +239,10 @@ colnames(SR.preds) <- c("Spawn", "Rec_lwr","Rec_med","Rec_upr", "CU")
 colnames(AR1.resids) <- c("year","lwr","midlwr","mid","midupr","upr", "CU")
 colnames(AR1.spwn) <- c("S.25", "S.50", "S.75", "year", "CU")
 colnames(AR1.harv) <- c("H.25", "H.50", "H.75", "year", "CU")
+colnames(AR1.ages) <- c("A.25", "A.50", "A.75", "age", "year", "CU")
 colnames(TV.resids) <- c("year","lwr","midlwr","mid","midupr","upr", "CU")
 colnames(TV.spwn) <- c("S.25", "S.50", "S.75", "CU", "year")
 colnames(TV.harv) <- c("H.25", "H.50", "H.75", "CU", "year")
-
-if(FALSE){
-SR.preds$CU_f <- factor(SR.preds$CU, levels = CU_order)
-AR1.spwn$CU_f <- factor(AR1.spwn$CU, levels = CU_order)
-AR1.resids$CU_f <- factor(AR1.resids$CU, levels = CU_order)
-AR1.harv$CU_f <- factor(AR1.harv$CU, levels = CU_order)
-TV.resids$CU_f <- factor(TV.resids$CU, levels = CU_order)
-TV.spwn$CU_f <- factor(TV.spwn$CU, levels = CU_order)
-TV.harv$CU_f <- factor(TV.harv$CU, levels = CU_order)
-brood.all$CU_f <- factor(brood.all$CU, levels = CU_order)
-brood.all.long$CU_f <- factor(brood.all.long$CU, levels = CU_order)
-TV.SR.preds$CU_f <- factor(TV.SR.preds$CU, levels = CU_order)
-esc$CU_f <- factor(esc$stock, levels = CU_order)
-}#turn off
 
 # write important tables to repo ---------------------------------------------------------
 bench.par.table.out <- bench.par.table |> # AR1 SR model pars and benchmarks
@@ -402,15 +403,53 @@ ggplot() +
         legend.title = element_text(size=9),
         legend.text = element_text(size=8))
 
-tmy.ggsave(here("plots/TV_SR_fits.PNG"))
+my.ggsave(here("plots/TV_SR_fits.PNG"))
 
 # deleted yukon code below this fig. To see more look here 
 # (https://github.com/Pacific-salmon-assess/yukon-CK-ResDoc/blob/main/analysis/R/inference_figs.R#L383)
 
 
-#post hoc plots for skeena
+#post hoc plots for skeena-nass ----------------------------------------------------------
 
-#latent states ---
+# the data ---
+plot_data <- sp_har |>
+  select(CU, year, spwn, harv) |>
+  pivot_longer(cols = c(spwn, harv), names_to = "obs") |>
+  mutate(obs = ifelse(obs == "spwn", "Spawners", "Harvest"))
+
+#Skeena
+ggplot(filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+       aes(year, value/1000, color = CU)) +
+  geom_point() +
+  geom_line() +
+  scale_color_viridis_d() +
+  facet_wrap(~obs, nrow = 2) +
+  labs(x = "Brood year", y = "Fish (thousands)")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size=9),
+        legend.text = element_text(size=8))
+
+my.ggsave(here("plots/Skeena/sp_har_data.PNG"))
+
+#Nass
+ggplot(filter(plot_data, CU %in% c("Lower Nass", "Upper Nass")), 
+       aes(year, value/1000, color = CU)) +
+  geom_point() +
+  geom_line() +
+  scale_color_viridis_d(end = 0.6) +
+  facet_wrap(~obs, nrow = 2) +
+  labs(x = "Brood year", y = "Fish (thousands)")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size=9),
+        legend.text = element_text(size=8))
+
+my.ggsave(here("plots/Nass/sp_har_data.PNG"))
+
+#latent states and data by CU ---
 AR1.obs <- AR1.harv |>
   mutate(obs = "Harvest") |>
   rename(S.25 = H.25, 
@@ -418,53 +457,86 @@ AR1.obs <- AR1.harv |>
          S.75 = H.75) |>
   bind_rows(AR1.spwn) |> 
   mutate(obs = ifelse(is.na(obs), "Spawners", obs))
+
 colnames(AR1.obs) <- c("p.25", "p.50", "p.75", "year", "CU", "obs")
 
+# Harvest obs and data ---
+
 #Skeena
-ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")))) +
-  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000, fill = CU), alpha = 0.2) +
-  geom_line(aes(x = year, y = p.50/1000, color = CU)) +
-  scale_color_viridis_d() +
-  scale_fill_viridis_d() +
-  facet_wrap(~obs, nrow = 2, scales = "free") +
-  labs(x = "Brood year", y = "Fish (thousands)") +
+ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Harvest")) +
+  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
+  geom_line(aes(x = year, y = p.50/1000)) +
+  geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Harvest"), 
+                         aes(x=year, y=value/1000)) +
+  facet_wrap(~CU,scales = "free", ncol = 2) +
+  labs(x = "Brood year", y = "Harvest (thousands)") +
+  theme_minimal() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.key.size = unit(0.4, "cm"),
         legend.title = element_text(size=9),
         legend.text = element_text(size=8))
   
-my.ggsave(here("plots/Skeena/sp_har_obs.PNG"))
+my.ggsave(here("plots/Skeena/har_obs.PNG"), height = 10, width = 9)
 
 #Nass
-ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Upper Nass"))) +
-  geom_line(aes(x = year, y = p.50/1000, color = CU), lwd=1) +
-  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000, fill = CU), alpha = 0.2) +
-  scale_color_viridis_d(end = 0.6) +
-  scale_fill_viridis_d(end = 0.6) +
-  facet_wrap(~obs, nrow = 2, scales = "free") +
-  labs(x = "Brood year", y = "Fish (thousands)") +
+ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Upper Nass"), obs == "Harvest")) +
+  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
+  geom_line(aes(x = year, y = p.50/1000)) +
+  geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Upper Nass"), obs == "Harvest"), 
+             aes(x=year, y=value/1000)) +
+  facet_wrap(~CU,scales = "free", ncol = 1) +
+  labs(x = "Brood year", y = "Harvest (thousands)") +
   theme_minimal() +
   theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size=9),
+        legend.text = element_text(size=8))
 
-my.ggsave(here("plots/Nass/sp_har_obs.PNG"))
+my.ggsave(here("plots/Nass/har_obs.PNG"), height = 10, width = 9)
+
+# Spawner obs and data ---
+
+#Skeena
+ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Spawners")) +
+  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
+  geom_line(aes(x = year, y = p.50/1000)) +
+  geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Spawners"), 
+             aes(x=year, y=value/1000)) +
+  facet_wrap(~CU,scales = "free", ncol = 2) +
+  labs(x = "Brood year", y = "Spawners (thousands)") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size=9),
+        legend.text = element_text(size=8))
+
+my.ggsave(here("plots/Skeena/spwn_obs.PNG"), height = 10, width = 9)
+
+#Nass
+ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Upper Nass"), obs == "Spawners")) +
+  geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
+  geom_line(aes(x = year, y = p.50/1000)) +
+  geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Upper Nass"), obs == "Spawners"), 
+             aes(x=year, y=value/1000)) +
+  facet_wrap(~CU,scales = "free", ncol = 1) +
+  labs(x = "Brood year", y = "Spawners (thousands)") +
+  theme_minimal() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.key.size = unit(0.4, "cm"),
+        legend.title = element_text(size=9),
+        legend.text = element_text(size=8))
+
+my.ggsave(here("plots/Nass/spwn_obs.PNG"), height = 10, width = 9)
 
 #plot A_obs 
 A_plot <- sp_har |>
   select(CU, year, a4, a5, a6) |>
   pivot_longer(cols = a4:a6)
 
-ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Upper Nass"))), 
-       aes(x=year, y=value/100)) +
-  geom_line() +
-  facet_grid(CU~name) +
-  scale_color_viridis_d() +
-  labs(x = "Return year", y = "Proportion at age") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
-
-#better option
 #Skeena
 ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Upper Nass"))), 
        aes(x=year, y=value/100, fill = name)) +
@@ -487,3 +559,83 @@ ggplot(filter(A_plot, CU %in% c("Lower Nass", "Upper Nass")),
 
 my.ggsave(here("plots/Nass/A_obs.PNG"))
 
+# plot latent states of prop at age ---
+A_Plot <- A_plot |>
+  mutate(age = case_when(name == "a4" ~ 4, 
+                         name == "a5" ~ 5, 
+                         name == "a6" ~ 6))
+
+#individual fit EXAMPLE
+ggplot(filter(AR1.ages, CU == "Kitsumkalum"), aes(year, A.50)) +
+  geom_ribbon(aes(ymin=A.25, ymax=A.75), alpha = 0.4) +
+  geom_point(data = filter(A_Plot, CU == "Kitsumkalum"), aes(x=year, y= value/100)) +
+  geom_line() +
+  facet_wrap(~age, nrow=3) +
+  theme_minimal() +
+  labs(y= "Proportion at age", x = "Return year")
+
+my.ggsave(here("plots/Skeena/prop_age_example.PNG"), height = 10, width = 9)
+
+ggplot(filter(AR1.ages, CU == "Lower Nass"), aes(year, A.50)) +
+  geom_ribbon(aes(ymin=A.25, ymax=A.75), alpha = 0.4) +
+  geom_point(data = filter(A_Plot, CU == "Lower Nass"), aes(x=year, y= value/100)) +
+  geom_line() +
+  facet_wrap(~age, nrow=3) +
+  theme_minimal() +
+  labs(y= "Proportion at age", x = "Return year")
+
+my.ggsave(here("plots/Nass/prop_age_example.PNG"), height = 10, width = 9)
+
+# posterior distribution of reference points ----
+bench.long <- pivot_longer(bench.posts, cols = c(Smsr.20, Smsr.40, S.recent), names_to = "par") |>
+  arrange(CU, par, value) |>
+  filter(value <= 10000)
+
+b <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))),  
+            aes(Smsr/1000, fill = CU, color = CU)) +
+  geom_density(alpha = 0.3,bw=0.6) +
+  theme(legend.position = "bottom") +
+  labs(x = expression(italic(S[MSR])), y = "Posterior density") +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d() +
+#  theme_sleek()   +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(),
+        legend.position=c(0.68, 0.65)) +
+  guides(fill=guide_legend(ncol=2, theme = theme(legend.byrow = TRUE)),
+         colour=guide_legend(ncol=2, theme = theme(legend.byrow = TRUE))) +
+  scale_x_continuous(limits = c(0, 30))
+
+c <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+            aes(Umsy, fill = CU, color = CU)) +
+  geom_density(alpha = 0.3,bw=0.03) +
+  theme(legend.position = "bottom") +
+  labs(x = expression(italic(U[MSY])), y = "Posterior density") +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d() +
+  #theme_sleek()   +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(),
+        legend.position="none") +
+  scale_x_continuous(limits = c(0, 1))
+
+par.long <- par.posts |>
+  mutate(alpha = exp(ln_a))
+
+a <- ggplot(filter(par.long, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+            aes(alpha, fill = CU, color = CU)) +
+  geom_density(alpha = 0.3,bw=0.4) +
+  labs(x = "Intrinsic productivity", y = "Posterior density") +
+  scale_color_viridis_d() +
+  scale_fill_viridis_d() +
+  #theme_sleek()   +
+  theme(legend.position = "none",
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank()) +
+  scale_x_continuous(limits = c(0, 12))
+
+cowplot::plot_grid(a, b, c, labels="auto", ncol=1)
+my.ggsave(here("plots/Skeena/ref_pts.PNG"))
