@@ -376,7 +376,7 @@ a.yrs.all |>
   filter(CU %in% c("Lower Nass", "Upper Nass")) |>
   ggplot(aes(color=CU)) +
   geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
-  scale_color_viridis_d() +
+  scale_color_viridis_d(end = 0.6) +
   geom_hline(yintercept = 1, lty=2, col = "grey") +
   labs(y ="Productivity (\U03B1)", x = "Brood year")+
   guides(color=guide_legend(title="Conservation Unit"))
@@ -591,6 +591,7 @@ bench.long <- pivot_longer(bench.posts, cols = c(Smsr.20, Smsr.40, S.recent), na
   arrange(CU, par, value) |>
   filter(value <= 10000)
 
+#Skeena 
 b <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))),  
             aes(Smsr/1000, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.6) +
@@ -639,3 +640,50 @@ a <- ggplot(filter(par.long, !(CU %in% c("Lower Nass", "Upper Nass"))),
 
 cowplot::plot_grid(a, b, c, labels="auto", ncol=1)
 my.ggsave(here("plots/Skeena/ref_pts.PNG"))
+
+#Nass
+b <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Upper Nass")),  
+            aes(Smsr/1000, fill = CU, color = CU)) +
+  geom_density(alpha = 0.3,bw=0.6) +
+  theme(legend.position = "bottom") +
+  labs(x = expression(italic(S[MSR])), y = "Posterior density") +
+  scale_color_viridis_d(end = 0.6) +
+  scale_fill_viridis_d(end = 0.6) +
+  #  theme_sleek()   +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(),
+        legend.position=c(0.68, 0.65)) +
+  guides(fill=guide_legend(ncol=2, theme = theme(legend.byrow = TRUE)),
+         colour=guide_legend(ncol=2, theme = theme(legend.byrow = TRUE))) +
+  scale_x_continuous(limits = c(0, 30))
+
+c <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Upper Nass")), 
+            aes(Umsy, fill = CU, color = CU)) +
+  geom_density(alpha = 0.3,bw=0.03) +
+  theme(legend.position = "bottom") +
+  labs(x = expression(italic(U[MSY])), y = "Posterior density") +
+  scale_color_viridis_d(end = 0.6) +
+  scale_fill_viridis_d(end = 0.6) +
+  #theme_sleek()   +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(),
+        legend.position="none") +
+  scale_x_continuous(limits = c(0, 1))
+
+a <- ggplot(filter(par.long, CU %in% c("Lower Nass", "Upper Nass")), 
+            aes(alpha, fill = CU, color = CU)) +
+  geom_density(alpha = 0.3,bw=0.4) +
+  labs(x = "Intrinsic productivity", y = "Posterior density") +
+  scale_color_viridis_d(end = 0.6) +
+  scale_fill_viridis_d(end = 0.6) +
+  #theme_sleek()   +
+  theme(legend.position = "none",
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank()) +
+  scale_x_continuous(limits = c(0, 12))
+
+cowplot::plot_grid(a, b, c, labels="auto", ncol=1)
+my.ggsave(here("plots/Nass/ref_pts.PNG"))
