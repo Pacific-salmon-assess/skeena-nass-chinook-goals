@@ -17,8 +17,7 @@ sp_har <- as.data.frame(skeena$run_recon) |>
             harv = sum(total_harvest_estimate)) |>
   mutate(SMU = "Skeena") |>
   arrange(CU, year) |>
-  filter(CU != "Skeena") |> #remove aggregate
-  mutate(harv = abs(harv)) ##FIX NEGATIVE Harvest! Need to ask luke about this... 
+  filter(CU != "Skeena") #remove aggregate
 
 A_obs <- NULL
 for(i in 1:dim(skeena$age_observations)[1]){
@@ -50,9 +49,7 @@ nass_sp_har <- read.csv(here("data/Nass_SpHar.csv"))
 
 #bind skeena and nass
 A_obs <- bind_rows(A_obs, nass_Aobs) |>
-  filter(!is.na(a4))|>  #hope a4 is representative of NA rows - be sure to check
   mutate_if(is.numeric, round, 0)
-  
   
 sp_har <- bind_rows(sp_har, nass_sp_har) |>
   filter(!is.na(spwn))|>
@@ -71,7 +68,7 @@ sp_har |>
 #merge and filter dfs so they have complete years of data among CUs
   # could make this robust depending on our final data... 
 sp_har <- left_join(sp_har, A_obs) |> 
-  filter(!is.na(a4)) |> #remove NAs once joined
+  filter(!is.na(a4)) |> #remove years of NA age obs once joined
   mutate(spwn_cv = 0.5, #assumed CVs for now
          harv_cv = 0.3) |>
   arrange(CU, year) |>
@@ -85,7 +82,7 @@ A <- a_max - a_min + 1 #total age classes
 yrs <- sp_har |>
   group_by(CU) |>
   summarise(nyrs = max(year)-min(year)+1, 
-            nRyrs = nyrs + A - 1)
+            nRyrs = nyrs + A - 1) ## want to be certain this is A not a_min
 
 rm(A_obs, a_obs, nass_Aobs, nass_sp_har, skeena, i)
 
