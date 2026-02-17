@@ -87,14 +87,15 @@ nass_age_length_raw <- nass_ages |>
          age %in% c(4,5,6)) 
 
 ggplot(nass_age_length_raw, aes(x = Year, y = MEF)) +
-  stat_summary(fun = mean, geom = "point", size = 3) + # Add points for the mean
+  stat_summary(fun = mean, geom = "point", size = 3,col="dark grey") + # Add points for the mean
   stat_summary(
-    fun.data = mean_se, # Calculate mean and standard error
+    fun.data = mean_cl_boot, # Calculate mean and standard error
     geom = "errorbar",
-    width = 0.2 # Control the width of the error bar whiskers
+    width = 0, # Control the width of the error bar whiskers
+    col="dark grey"
   ) +
   labs(x = "Year", y = "Female length (MEF)")  +
   facet_wrap(~age) +
-  geom_smooth(method = "lm", se = TRUE, color = "blue", fill = "lightblue") +
+  geom_smooth(method = "lm", level = 0.95, color = "dark grey", fill = "lightblue") +
   theme_sleek()
 
