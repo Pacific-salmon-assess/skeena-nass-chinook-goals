@@ -56,3 +56,45 @@ ggplot(nass_ages |> filter(CU == "Upper Nass", Sex %in% c("M","F")), aes(x = Yea
   theme_sleek() +
   ylab("") + 
   labs(fill = "Age")
+
+ggplot(nass_ages, aes(x = Year, fill = as.factor(age))) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~Location, nrow  = 2) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_sleek() +
+  ylab("") + 
+  labs(fill = "Age")
+
+nass_age_length <- nass_ages |>
+  filter(Sex_full == "Female",
+         age %in% c(4,5,6)) |>
+  group_by(age, Year) |>
+  summarize(length = mean(MEF, na.rm=T))
+
+nass_age_length$age_f <- factor(nass_age_length$age, levels = c(4,5,6))
+
+ggplot(nass_age_length, aes(x = Year, y = length)) +
+  geom_smooth(method="lm", color="grey") +
+  geom_point(size=2, color="dark grey")+
+  xlab("Year") +
+  ylab("Female length \n  (mm; MEFL)") +
+  theme_sleek() +
+  facet_wrap(~age_f, scales = "free_y")
+
+nass_age_length_raw <- nass_ages |>
+  filter(Sex_full == "Female",
+         age %in% c(4,5,6)) 
+
+ggplot(nass_age_length_raw, aes(x = Year, y = MEF)) +
+  stat_summary(fun = mean, geom = "point", size = 3) + # Add points for the mean
+  stat_summary(
+    fun.data = mean_se, # Calculate mean and standard error
+    geom = "errorbar",
+    width = 0.2 # Control the width of the error bar whiskers
+  ) +
+  labs(x = "Year", y = "Female length (MEF)")  +
+  facet_wrap(~age) +
+  geom_smooth(method = "lm", se = TRUE, color = "blue", fill = "lightblue") +
+  theme_sleek()
+
