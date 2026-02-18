@@ -17,11 +17,6 @@ TVA.fits <- lapply(list.files(here("data/generated/model_fits/TVA"),
                               full.names = T), readRDS)
 names(TVA.fits) <- unique(sp_har$CU)
 
-# escapement estimates ---
-  # these must be the latent states and their error? 
-#esc <- read.csv(here("analysis/data/generated/esc-data.csv")) |>
-#  mutate_at(2:6, as.numeric)
-
 # process data and fits to make plots later ----------------------------------------------
 bench.par.table <- NULL #empty objects to rbind CU's outputs to
 bench.posts <- NULL
