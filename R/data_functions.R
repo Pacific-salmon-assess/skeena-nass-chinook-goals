@@ -1,25 +1,32 @@
 library(tidyverse)
 library(here)
+#library(devtools) #comment out below if you need to install skrunchy
+#install_github("Pacific-salmon-assess/skrunchy")
+#install_github("lukewarkentin/skrunchy2025")
+library(skrunchy2025)
 
 #-----------------------------------------------------------------------------------------
 # read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO) and Nass data from
   # Ian Beveridge & Richard Alexander (LGL)
 
-skeena <- readRDS(here("data/twg_data_for_examples_Nov2025.rds"))
+#old way of reading skeena data, helper till i sort A_obs
+skeena <- readRDS(here("data/twg_data_for_examples_Nov2025.rds")) 
 
-#NEED TO check on and account for `complete_brood_year` in table below
-sp_har <- as.data.frame(skeena$run_recon) |>
+sp_har <- skrunchy2025::run_reconstruction_table |>
   select(population, return_year, wild_spawners, total_harvest_estimate) |>
   rename(CU = population, 
          year = return_year) |>
   group_by(CU, year) |>
-  summarise(spwn = sum(wild_spawners), #sum across ages
-            harv = sum(total_harvest_estimate)) |>
+  summarise(spwn = round(sum(wild_spawners, na.rm = TRUE)), #sum across ages
+            harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
   mutate(SMU = "Skeena") |>
   arrange(CU, year) |>
-  filter(CU != "Skeena") #remove aggregate
+  filter(CU != "Skeena") |>#remove aggregate
+  as.data.frame()
 
-A_obs <- NULL
+#skrunchy2025::n_age_observations #what is the same as age_comps_arr??
+
+A_obs <- NULL #empty object to bind to
 for(i in 1:dim(skeena$age_observations)[1]){
   a_obs <- as.data.frame(skeena$age_comps_arr[i,,]) |>
     mutate(CU = dimnames(skeena$age_comps_arr)$i[i])
@@ -44,17 +51,25 @@ rownames(A_obs) <- NULL
 # read in Nass data - this data was processed by copy & pasting LGL's data and calculating 
   # new vars (i.e. combining age groups and calc'ing harvest) all in excel as a placeholder
 
-nass_Aobs <- read.csv(here("data/Nass_Aobs.csv"))
-nass_sp_har <- read.csv(here("data/Nass_SpHar.16Feb2026.csv"))
+nass_Aobs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))
+
+#make dataset long and add CU names since they are shared among all CUs 
+  #hacky fix so it lines up for modelling
+nass_Aobs <- bind_rows(nass_Aobs, nass_Aobs, nass_Aobs) |> 
+  mutate(CU = c(rep("Upper Nass", nrow(nass_Aobs)), 
+                rep("Middle Nass", nrow(nass_Aobs)), 
+                rep("Lower Nass", nrow(nass_Aobs))), 
+         SMU = "Nass") |>
+  rename(year = Year)
+
+nass_sp_har <- read.csv(here("data/Nass_SpHar_16Feb2026.csv"))
 
 #bind skeena and nass
 A_obs <- bind_rows(A_obs, nass_Aobs) |>
   mutate_if(is.numeric, round, 0)
-  
-sp_har <- bind_rows(sp_har, nass_sp_har) |>
-  filter(!is.na(spwn))|>
-  mutate_if(is.numeric, round, 0)
 
+sp_har <- bind_rows(sp_har, nass_sp_har) |>
+  filter(!is.na(spwn))
 
 #check timeseries of complete dataset
 A_obs |>
@@ -67,10 +82,10 @@ sp_har |>
 
 #merge and filter dfs so they have complete years of data among CUs
   # could make this robust depending on our final data... 
-sp_har <- left_join(sp_har, A_obs) |> 
+sp_har <- left_join(sp_har, A_obs, by = c("CU", "year", "SMU")) |> 
   filter(!is.na(a4)) |> #remove years of NA age obs once joined
-  mutate(spwn_cv = 0.5, #assumed CVs for now
-         harv_cv = 0.3) |>
+  mutate(harv_cv = 0.3, #assumed harvest CV
+         spwn_cv = replace_na(spwn_cv, 0.5)) |> #replace unknown CVs with assumed
   arrange(CU, year) |>
   as.data.frame()
 
