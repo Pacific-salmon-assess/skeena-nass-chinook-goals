@@ -24,12 +24,12 @@ sp_har <- skrunchy2025::run_reconstruction_table |>
   filter(CU != "Skeena") |>#remove aggregate
   as.data.frame()
 
-#skrunchy2025::n_age_observations #what is the same as age_comps_arr??
+skrunchy2025::omega$omega #what is the same as age_comps_arr??
 
 A_obs <- NULL #empty object to bind to
-for(i in 1:dim(skeena$age_observations)[1]){
-  a_obs <- as.data.frame(skeena$age_comps_arr[i,,]) |>
-    mutate(CU = dimnames(skeena$age_comps_arr)$i[i])
+for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
+  a_obs <- as.data.frame(skrunchy2025::omega$omega[i,,]) |>
+    mutate(CU = dimnames(skrunchy2025::omega$omega)$i[i])
   a_obs <- mutate(a_obs, year = rownames(a_obs))
   A_obs <- bind_rows(A_obs, a_obs)
 }
