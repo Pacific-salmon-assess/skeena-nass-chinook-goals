@@ -45,7 +45,7 @@ rownames(A_obs) <- NULL
   # new vars (i.e. combining age groups and calc'ing harvest) all in excel as a placeholder
 
 nass_Aobs <- read.csv(here("data/Nass_Aobs.csv"))
-nass_sp_har <- read.csv(here("data/Nass_SpHar.csv"))
+nass_sp_har <- read.csv(here("data/Nass_SpHar.16Feb2026.csv"))
 
 #bind skeena and nass
 A_obs <- bind_rows(A_obs, nass_Aobs) |>
