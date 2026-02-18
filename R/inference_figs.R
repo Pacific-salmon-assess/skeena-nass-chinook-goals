@@ -57,8 +57,9 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   spwn.quant <- apply(sub_pars$S, 2, quantile, probs=c(0.1,0.5,0.9))[,1:(nyrs-a_min)]
   rec.quant <- apply(sub_pars$R, 2, quantile, probs=c(0.1,0.5,0.9))[,(A+a_min):nRyrs]
   
-  brood_t <- as.data.frame(cbind(sub_dat$year[1:(nyrs-A)], t(spwn.quant), t(rec.quant))) |>
-    round(2)
+  brood_t <- as.data.frame(cbind(sub_dat$year[1:(nyrs-a_min)], t(spwn.quant), t(rec.quant))) |>
+    round(2) #DG NOTE! I changed `nyrs-A` to `nyrs-a_min` so the lengths would be the same
+                #I am PRAYING this was just a small error in the Yukon Chinook code because A = a_min there... 
   colnames(brood_t) <- c("BroodYear","S_lwr","S_med","S_upr","R_lwr","R_med","R_upr")
   
   brood_t <- mutate(brood_t, CU = i)
@@ -121,7 +122,8 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   
   SR.pred <- as.data.frame(cbind(spw,t(apply(SR.pred, 1, quantile,probs=c(0.1,0.5,0.9), na.rm=T))))|>
     round(2) |>
-    mutate(CU = i)
+    mutate(CU = i, 
+           SMU = unique(sub_dat$SMU))
   
   SR.preds <- rbind(SR.preds, SR.pred)
   
@@ -229,7 +231,7 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
 }  # End data wrangling loop by CU
 
 
-colnames(SR.preds) <- c("Spawn", "Rec_lwr","Rec_med","Rec_upr", "CU")
+colnames(SR.preds) <- c("Spawn", "Rec_lwr","Rec_med","Rec_upr", "CU", "SMU")
 colnames(AR1.resids) <- c("year","lwr","midlwr","mid","midupr","upr", "CU")
 colnames(AR1.spwn) <- c("S.25", "S.50", "S.75", "year", "CU")
 colnames(AR1.harv) <- c("H.25", "H.50", "H.75", "year", "CU")
@@ -245,8 +247,6 @@ bench.par.table.out <- bench.par.table |> # AR1 SR model pars and benchmarks
   relocate(mean, .after = 2) |>
   mutate_at(3:7, ~round(.,5)) |>
   arrange(bench.par, CU)
-
-bench.par.table.out[73:80,3:6] <- bench.par.table.out[73:80,3:6]*10000 ## transform beta - do it better?
 
 write.csv(bench.par.table.out, here("data/generated/bench_par_table.csv"),
           row.names = FALSE)
@@ -266,14 +266,13 @@ a.yrs.all$model<-"spw"
 write.csv(a.yrs.all, here("data/generated/spw_TVA.csv"),
           row.names = FALSE)
 
-
 # make key plots for pub -----------------------------------------------------------------
 
 # SR fits ----
 #Skeena
 ggplot() +
   geom_abline(intercept = 0, slope = 1,col="dark grey") +
-  geom_ribbon(data = filter(SR.preds, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+  geom_ribbon(data = filter(SR.preds, SMU == "Skeena"), 
               aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
               fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
   geom_errorbar(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))), 
@@ -297,18 +296,18 @@ my.ggsave(here("plots/Skeena/SR_fits_AR1.PNG"))
 #Nass
 ggplot() +
   geom_abline(intercept = 0, slope = 1,col="dark grey") +
-  geom_ribbon(data = filter(SR.preds, CU %in% c("Lower Nass", "Upper Nass")), 
+  geom_ribbon(data = filter(SR.preds, SMU == "Nass"), 
               aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
               fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
-  geom_errorbar(data = filter(brood.all, CU %in% c("Lower Nass", "Upper Nass")), 
+  geom_errorbar(data = filter(brood.all, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
                 aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
                 colour="grey", width=0, linewidth=0.3) +
-  geom_errorbarh(data = filter(brood.all, CU %in% c("Lower Nass", "Upper Nass")), 
+  geom_errorbarh(data = filter(brood.all, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
                  aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
                  height=0, colour = "grey", linewidth = 0.3) +
-  geom_point(data = filter(brood.all, CU %in% c("Lower Nass", "Upper Nass")),
+  geom_point(data = filter(brood.all, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")),
              aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
-  geom_line(data = filter(SR.preds, CU %in% c("Lower Nass", "Upper Nass")), 
+  geom_line(data = filter(SR.preds, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
             aes(x = Spawn/1000, y = Rec_med/1000)) +
   facet_wrap(~CU, scales = "free") +
   scale_colour_viridis_c(name = "Brood Year")+
@@ -353,8 +352,8 @@ my.ggsave(here("plots/TV_resids.PNG"))
 # TV alpha ----
 #Skeena
 a.yrs.all |>
-  filter(brood_year < 2018) |> ## why?
-  filter(!(CU %in% c("Lower Nass", "Upper Nass"))) |>
+  filter(brood_year < 2018) |> ## DOUBLE CHECK THIS - based on yukon chinook, might need to be ragged
+  filter(!(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))) |>
   ggplot(aes(color=CU)) +
   geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
   scale_color_viridis_d() +
@@ -366,8 +365,8 @@ my.ggsave(here("plots/Skeena/changing_productivity.PNG"))
 
 #Nass
 a.yrs.all |>
-  filter(brood_year < 2018) |> ## why?
-  filter(CU %in% c("Lower Nass", "Upper Nass")) |>
+  filter(brood_year < 2018) |> ## as above
+  filter(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")) |>
   ggplot(aes(color=CU)) +
   geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
   scale_color_viridis_d(end = 0.6) +
@@ -390,8 +389,7 @@ ggplot() +
   labs(x = "Spawners (000s)",
        y = "Recruits (000s)",
        title = "Time varying productivity spawner-recruit fits") +
-  theme(legend.position = "bottom",
-        panel.grid.major = element_blank(),
+  theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.key.size = unit(0.4, "cm"),
         legend.title = element_text(size=9),
@@ -412,7 +410,7 @@ plot_data <- sp_har |>
   mutate(obs = ifelse(obs == "spwn", "Spawners", "Harvest"))
 
 #Skeena
-ggplot(filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+ggplot(filter(plot_data, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
        aes(year, value/1000, color = CU)) +
   geom_point() +
   geom_line() +
@@ -428,7 +426,7 @@ ggplot(filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass"))),
 my.ggsave(here("plots/Skeena/sp_har_data.PNG"))
 
 #Nass
-ggplot(filter(plot_data, CU %in% c("Lower Nass", "Upper Nass")), 
+ggplot(filter(plot_data, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
        aes(year, value/1000, color = CU)) +
   geom_point() +
   geom_line() +
@@ -457,10 +455,10 @@ colnames(AR1.obs) <- c("p.25", "p.50", "p.75", "year", "CU", "obs")
 # Harvest obs and data ---
 
 #Skeena
-ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Harvest")) +
+ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), obs == "Harvest")) +
   geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
   geom_line(aes(x = year, y = p.50/1000)) +
-  geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Harvest"), 
+  geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), obs == "Harvest"), 
                          aes(x=year, y=value/1000)) +
   facet_wrap(~CU,scales = "free", ncol = 2) +
   labs(x = "Brood year", y = "Harvest (thousands)") +
@@ -474,10 +472,10 @@ ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Harvest
 my.ggsave(here("plots/Skeena/har_obs.PNG"), height = 10, width = 9)
 
 #Nass
-ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Upper Nass"), obs == "Harvest")) +
+ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs == "Harvest")) +
   geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
   geom_line(aes(x = year, y = p.50/1000)) +
-  geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Upper Nass"), obs == "Harvest"), 
+  geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs == "Harvest"), 
              aes(x=year, y=value/1000)) +
   facet_wrap(~CU,scales = "free", ncol = 1) +
   labs(x = "Brood year", y = "Harvest (thousands)") +
@@ -493,10 +491,10 @@ my.ggsave(here("plots/Nass/har_obs.PNG"), height = 10, width = 9)
 # Spawner obs and data ---
 
 #Skeena
-ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Spawners")) +
+ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), obs == "Spawners")) +
   geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
   geom_line(aes(x = year, y = p.50/1000)) +
-  geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Spawners"), 
+  geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), obs == "Spawners"), 
              aes(x=year, y=value/1000)) +
   facet_wrap(~CU,scales = "free", ncol = 2) +
   labs(x = "Brood year", y = "Spawners (thousands)") +
@@ -510,10 +508,10 @@ ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Upper Nass")), obs == "Spawner
 my.ggsave(here("plots/Skeena/spwn_obs.PNG"), height = 10, width = 9)
 
 #Nass
-ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Upper Nass"), obs == "Spawners")) +
+ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs == "Spawners")) +
   geom_ribbon(aes(x = year, ymin = p.25/1000, ymax = p.75/1000), alpha = 0.2) +
   geom_line(aes(x = year, y = p.50/1000)) +
-  geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Upper Nass"), obs == "Spawners"), 
+  geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs == "Spawners"), 
              aes(x=year, y=value/1000)) +
   facet_wrap(~CU,scales = "free", ncol = 1) +
   labs(x = "Brood year", y = "Spawners (thousands)") +
@@ -532,7 +530,7 @@ A_plot <- sp_har |>
   pivot_longer(cols = a4:a6)
 
 #Skeena
-ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
        aes(x=year, y=value/100, fill = name)) +
   geom_area(alpha = 0.8) +  
   theme_minimal() +
@@ -543,7 +541,7 @@ ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Upper Nass"))),
 my.ggsave(here("plots/Skeena/A_obs.PNG"))
 
 #Nass
-ggplot(filter(A_plot, CU %in% c("Lower Nass", "Upper Nass")), 
+ggplot(filter(A_plot, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
        aes(x=year, y=value/100, fill = name)) +
   geom_area(alpha = 0.8) +  
   theme_minimal() +
@@ -554,7 +552,7 @@ ggplot(filter(A_plot, CU %in% c("Lower Nass", "Upper Nass")),
 my.ggsave(here("plots/Nass/A_obs.PNG"))
 
 # plot latent states of prop at age ---
-A_Plot <- A_plot |>
+A_plot <- A_plot |>
   mutate(age = case_when(name == "a4" ~ 4, 
                          name == "a5" ~ 5, 
                          name == "a6" ~ 6))
@@ -586,7 +584,7 @@ bench.long <- pivot_longer(bench.posts, cols = c(Smsr.20, Smsr.40, S.recent), na
   filter(value <= 10000)
 
 #Skeena 
-b <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))),  
+b <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))),  
             aes(Smsr/1000, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.6) +
   theme(legend.position = "bottom") +
@@ -602,7 +600,7 @@ b <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))),
          colour=guide_legend(ncol=2, theme = theme(legend.byrow = TRUE))) +
   scale_x_continuous(limits = c(0, 30))
 
-c <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+c <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
             aes(Umsy, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.03) +
   theme(legend.position = "bottom") +
@@ -619,7 +617,7 @@ c <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Upper Nass"))),
 par.long <- par.posts |>
   mutate(alpha = exp(ln_a))
 
-a <- ggplot(filter(par.long, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+a <- ggplot(filter(par.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
             aes(alpha, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.4) +
   labs(x = "Intrinsic productivity", y = "Posterior density") +
@@ -636,7 +634,7 @@ cowplot::plot_grid(a, b, c, labels="auto", ncol=1)
 my.ggsave(here("plots/Skeena/ref_pts.PNG"))
 
 #Nass
-b <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Upper Nass")),  
+b <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")),  
             aes(Smsr/1000, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.6) +
   theme(legend.position = "bottom") +
@@ -652,7 +650,7 @@ b <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Upper Nass")),
          colour=guide_legend(ncol=2, theme = theme(legend.byrow = TRUE))) +
   scale_x_continuous(limits = c(0, 30))
 
-c <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Upper Nass")), 
+c <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
             aes(Umsy, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.03) +
   theme(legend.position = "bottom") +
@@ -666,7 +664,7 @@ c <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Upper Nass")),
         legend.position="none") +
   scale_x_continuous(limits = c(0, 1))
 
-a <- ggplot(filter(par.long, CU %in% c("Lower Nass", "Upper Nass")), 
+a <- ggplot(filter(par.long, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
             aes(alpha, fill = CU, color = CU)) +
   geom_density(alpha = 0.3,bw=0.4) +
   labs(x = "Intrinsic productivity", y = "Posterior density") +
@@ -681,3 +679,24 @@ a <- ggplot(filter(par.long, CU %in% c("Lower Nass", "Upper Nass")),
 
 cowplot::plot_grid(a, b, c, labels="auto", ncol=1)
 my.ggsave(here("plots/Nass/ref_pts.PNG"))
+
+
+#spawners through time relative to ref points
+bench.long <- bench.posts |>
+  select(CU, Smsr.20, Smsr.40, S.recent) |>
+  pivot_longer(cols = c(Smsr.20, Smsr.40, S.recent), names_to = "par") |>
+  arrange(CU, par, value) |>
+  filter(value <= 10000) #WHY?
+
+#recent spawners relative to ref points 
+ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
+       aes(value/1000, fill = par)) +
+  geom_density(alpha = 0.3) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(breaks = c("S.recent", "Smsr.20", "Smsr.40"),
+                    values = c("black", "darkred", "forestgreen"),
+                    aesthetics = c("fill", "color"),
+                    labels = c(expression(italic(S[recent])), expression(italic(paste("20% ",S)[MSR])),
+                               expression(italic(paste("40% ",S)[MSR])))) +
+  #xlim() + #set limit to 99th percentile or whatever
+  facet_wrap(~CU, scales = "free")
