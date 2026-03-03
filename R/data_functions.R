@@ -6,18 +6,15 @@ library(here)
 library(skrunchy2025)
 
 #-----------------------------------------------------------------------------------------
-# read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO) and Nass data from
-  # Ian Beveridge & Richard Alexander (LGL)
-
-#old way of reading skeena data, helper till i sort A_obs
-skeena <- readRDS(here("data/twg_data_for_examples_Nov2025.rds")) 
+# read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO)'s package
+  #and Nass data from Ian Beveridge & Richard Alexander (LGL)
 
 sp_har <- skrunchy2025::run_reconstruction_table |>
-  select(population, return_year, wild_spawners, total_harvest_estimate) |>
-  rename(CU = population, 
-         year = return_year) |>
+  select(i_population, y_return_year, W_star_wild_spawners, total_harvest_estimate) |>
+  rename(CU = i_population, 
+         year = y_return_year) |>
   group_by(CU, year) |>
-  summarise(spwn = round(sum(wild_spawners, na.rm = TRUE)), #sum across ages
+  summarise(spwn = round(sum(W_star_wild_spawners, na.rm = TRUE)), #sum across ages
             harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
   mutate(SMU = "Skeena") |>
   arrange(CU, year) |>
@@ -108,6 +105,36 @@ load <- base::load # make sure renv::load() does not mask base::load()
 my.ggsave <- function(filename = default_name(plot), plot = last_plot(),
                       width= 9, height = 5.562, dpi= 180){
   ggsave(filename=filename, plot = last_plot(), width=width, height=height, dpi=dpi, bg="white")
+}
+
+
+# theme from https://github.com/seananderson/ggsidekick/blob/master/R/theme_sleek.R
+theme_sleek <- function(base_size = 11, base_family = "") {
+  half_line <- base_size/2
+  t <- theme_light(base_size = base_size, base_family = base_family) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.ticks.length = unit(half_line / 2.2, "pt"),
+      strip.background = element_rect(fill = NA, colour = NA),
+      strip.text.x = element_text(colour = "grey30"),
+      strip.text.y = element_text(colour = "grey30"),
+      axis.text = element_text(colour = "grey30"),
+      axis.title = element_text(colour = "grey30"),
+      legend.title = element_text(colour = "grey30", size = rel(0.9)),
+      panel.border = element_rect(fill = NA, colour = "grey70", linewidth = 1),
+      legend.key.size = unit(0.9, "lines"),
+      legend.text = element_text(size = rel(0.7), colour = "grey30"),
+      legend.key = element_rect(colour = NA, fill = NA),
+      legend.background = element_rect(colour = NA, fill = NA),
+      plot.title = element_text(colour = "grey30", size = rel(1)),
+      plot.subtitle = element_text(colour = "grey30", size = rel(.85))
+    )
+  # Only set tagger theme element if tagger package is available
+  if (requireNamespace("tagger", quietly = TRUE)) {
+    t <- t + theme(tagger.panel.tag.text = element_text(colour = "grey30"))
+  }
+  t
 }
 
 # benchmark functions ---
