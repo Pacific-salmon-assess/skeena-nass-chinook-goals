@@ -16,12 +16,10 @@ sp_har <- skrunchy2025::run_reconstruction_table |>
   group_by(CU, year) |>
   summarise(spwn = round(sum(W_star_wild_spawners, na.rm = TRUE)), #sum across ages
             harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
-  mutate(SMU = "Skeena") |>
+  mutate(SMU = "Skeena", 
+         CU = ifelse(CU == "Skeena", "Skeena_aggregate", CU)) |>
   arrange(CU, year) |>
-  filter(CU != "Skeena") |>#remove aggregate
   as.data.frame()
-
-skrunchy2025::omega$omega #what is the same as age_comps_arr??
 
 A_obs <- NULL #empty object to bind to
 for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
@@ -41,28 +39,49 @@ A_obs <- A_obs |>
          a4 = a4*100, #* all by 100 to have a 100 fish balanced sample size for now 
          a5 = a5*100, 
          a6 = a6*100, 
-         year = as.numeric(year))  |>
-  filter(CU != "Skeena") #remove aggregate
-rownames(A_obs) <- NULL
+         year = as.numeric(year), 
+         CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU))
+
+  rownames(A_obs) <- NULL
 
 # read in Nass data - this data was processed by copy & pasting LGL's data and calculating 
   # new vars (i.e. combining age groups and calc'ing harvest) all in excel as a placeholder
 
-nass_Aobs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))
+# age data is aggregate for nass - no CU level data
+nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))
 
 #make dataset long and add CU names since they are shared among all CUs 
-  #hacky fix so it lines up for modelling
-nass_Aobs <- bind_rows(nass_Aobs, nass_Aobs, nass_Aobs) |> 
-  mutate(CU = c(rep("Upper Nass", nrow(nass_Aobs)), 
-                rep("Middle Nass", nrow(nass_Aobs)), 
-                rep("Lower Nass", nrow(nass_Aobs))), 
+  #hacky fix so it lines up for how skeena code is written
+nass_A_obs <- bind_rows(nass_A_obs, nass_A_obs, nass_A_obs, nass_A_obs) |> 
+  mutate(CU = c(rep("Upper Nass", nrow(nass_A_obs)), 
+                rep("Middle Nass", nrow(nass_A_obs)), 
+                rep("Lower Nass", nrow(nass_A_obs)), 
+                rep("Nass Aggregate", nrow(nass_A_obs))), 
          SMU = "Nass") |>
   rename(year = Year)
 
 nass_sp_har <- read.csv(here("data/Nass_SpHar_16Feb2026.csv"))
 
+#check years so we know to put only fully observed in aggregate
+nass_sp_har |>
+  group_by(CU) |>
+  summarise(min(year), 
+            max(year))
+
+nass_sp_har_agg <- nass_sp_har |>
+  filter(year >= 1994) |> #based on above
+  ##ASSUMPTION TO ADDRESS BELOW - infill NAs, then take mean?
+  mutate(spwn_cv = ifelse(is.na(spwn_cv), 0.5, spwn_cv)) |>  #0.5: upper end of empirical CVs
+  group_by(SMU, year) |>
+  summarise(spwn = sum(spwn), 
+            harv = sum(harv), 
+            spwn_cv = mean(spwn_cv)) |>
+  mutate(CU = "Nass Aggregate")
+
+nass_sp_har <- bind_rows(nass_sp_har, nass_sp_har_agg)
+
 #bind skeena and nass
-A_obs <- bind_rows(A_obs, nass_Aobs) |>
+A_obs <- bind_rows(A_obs, nass_A_obs) |>
   mutate_if(is.numeric, round, 0)
 
 sp_har <- bind_rows(sp_har, nass_sp_har) |>
@@ -96,7 +115,7 @@ yrs <- sp_har |>
   summarise(nyrs = max(year)-min(year)+1, 
             nRyrs = nyrs + A - 1) ## want to be certain this is A not a_min
 
-rm(A_obs, a_obs, nass_Aobs, nass_sp_har, skeena, i)
+rm(A_obs, a_obs, nass_A_obs, nass_sp_har, nass_sp_har_agg, i)
 
 
 # functions ------------------------------------------------------------------------------
