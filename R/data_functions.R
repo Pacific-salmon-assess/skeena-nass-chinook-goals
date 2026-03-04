@@ -17,7 +17,7 @@ sp_har <- skrunchy2025::run_reconstruction_table |>
   summarise(spwn = round(sum(W_star_wild_spawners, na.rm = TRUE)), #sum across ages
             harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
   mutate(SMU = "Skeena", 
-         CU = ifelse(CU == "Skeena", "Skeena_aggregate", CU)) |>
+         CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
   arrange(CU, year) |>
   as.data.frame()
 
