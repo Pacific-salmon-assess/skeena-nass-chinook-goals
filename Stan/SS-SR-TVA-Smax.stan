@@ -52,8 +52,7 @@ transformed parameters{
   // Maturity schedule: use a common maturation schedule to draw the brood year specific schedules
   pi[1] = prob[1];
   pi[2] = prob[2] * (1 - pi[1]);
-  pi[3] = prob[3] * (1 - pi[1] - pi[2]);
-  pi[4] = 1 - pi[1] - pi[2] - pi[3];
+  pi[3] = 1 - pi[1] - pi[2];
   D_sum = 1/D_scale^2;
   
   for (a in 1:A) {
