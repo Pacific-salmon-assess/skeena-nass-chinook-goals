@@ -57,11 +57,11 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   
   #latent states of spawners and recruits---
   spwn.quant <- apply(sub_pars$S, 2, quantile, probs = probs_80)[,1:(nyrs-a_min)]
-  rec.quant <- apply(sub_pars$R, 2, quantile, probs = probs_80)[,(a_max):nRyrs]
+  rec.quant <- apply(sub_pars$R, 2, quantile, probs = probs_80)[,(a_max+1):nRyrs]
   
   brood_t <- as.data.frame(cbind(sub_dat$year[1:(nyrs-a_min)], t(spwn.quant), t(rec.quant))) |>
-    round(2) #DG NOTE! I changed `nyrs-A` to `nyrs-a_min` so the lengths would be the same
-  #I am PRAYING this was just a small error in the Yukon Chinook code because A = a_min there... 
+    round(2) 
+  
   colnames(brood_t) <- c("BroodYear","S_lwr","S_med","S_upr","R_lwr","R_med","R_upr")
   
   brood_t <- mutate(brood_t, CU = i)
