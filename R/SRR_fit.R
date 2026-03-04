@@ -30,10 +30,9 @@ if(refit == TRUE){
                       "H_obs" = sp_har1$harv,
                       "S_cv" = sp_har1$spwn_cv,
                       "H_cv" = sp_har1$harv_cv,
-                      "Smax_p" = 0.75*max(sp_har1$spwn), #data for priors in semi_inform models, can tinker based on what assumed Smax is
-                      "Smax_p_sig" = 0.75*max(sp_har1$spwn))
-    
-    AR1.fit <- stan(file = here("Stan/SS-SR_AR1.stan"),
+                      "prior_S_max" = max(sp_har1$spwn)) #data for Smax priors
+
+    AR1.fit <- stan(file = here("Stan/SS-SR-AR1-Smax.stan"),
                     data = stan.data,
                     cores = 4,
                     seed = 2,
@@ -42,7 +41,7 @@ if(refit == TRUE){
     saveRDS(AR1.fit, here("data/generated/model_fits/AR1",
                           paste0(i, "_AR1.rds")))
     
-    TV.fit <- stan(file = here("Stan/SS-SR_TVA.stan"),
+    TV.fit <- stan(file = here("Stan/SS-SR-TVA-Smax.stan"),
                    data = stan.data,
                    cores = 4,
                    seed = 2,
