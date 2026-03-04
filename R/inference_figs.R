@@ -275,21 +275,20 @@ ggplot() +
   geom_ribbon(data = filter(SR.preds, SMU == "Skeena"), 
               aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
               fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
-  geom_errorbar(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+  geom_errorbar(data = filter(brood.all, !(CU %in% c("Lower Nass", "Middle Nass","Upper Nass"))), 
                 aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
                 colour="grey", width=0, linewidth=0.3) +
-  geom_errorbarh(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+  geom_errorbarh(data = filter(brood.all, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
                  aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
                  height=0, colour = "grey", linewidth = 0.3) +
-  geom_point(data = filter(brood.all, !(CU %in% c("Lower Nass", "Upper Nass"))),
+  geom_point(data = filter(brood.all, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))),
              aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
-  geom_line(data = filter(SR.preds, !(CU %in% c("Lower Nass", "Upper Nass"))), 
+  geom_line(data = filter(SR.preds, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
             aes(x = Spawn/1000, y = Rec_med/1000)) +
   facet_wrap(~CU, scales = "free") +
   scale_colour_viridis_c(name = "Brood Year")+
   labs(x = "Spawners (000s)", y = "Recruits (000s)") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
+  theme_sleek()
 
 my.ggsave(here("plots/Skeena/SR_fits_AR1.PNG"))
 
@@ -309,11 +308,10 @@ ggplot() +
              aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
   geom_line(data = filter(SR.preds, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
             aes(x = Spawn/1000, y = Rec_med/1000)) +
-  facet_wrap(~CU, scales = "free") +
+  facet_wrap(~CU, nrow=2,scales = "free") +
   scale_colour_viridis_c(name = "Brood Year")+
   labs(x = "Spawners (000s)", y = "Recruits (000s)") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/SR_fits_AR1.PNG"))
 
@@ -329,12 +327,12 @@ ggplot(AR1.resids, aes(x=year, y = mid)) +
   facet_wrap(~CU) +
   theme(legend.position = "none",
         panel.grid = element_blank()) +
-  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
+  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2) +
+  theme_sleek()
 
 my.ggsave(here("plots/AR1_resids.PNG"))
 
 # TV resids ----
-# Skeena
 ggplot(TV.resids, aes(x=year, y = mid)) +
   geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "darkgrey", alpha = 0.5) +
   geom_ribbon(aes(ymin = midlwr, ymax = midupr),  fill = "black", alpha=0.2) +
@@ -345,7 +343,8 @@ ggplot(TV.resids, aes(x=year, y = mid)) +
   facet_wrap(~CU) +
   theme(legend.position = "none",
         panel.grid = element_blank()) +
-  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
+  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2) +
+  theme_sleek()
 
 my.ggsave(here("plots/TV_resids.PNG"))
 
@@ -359,7 +358,8 @@ a.yrs.all |>
   scale_color_viridis_d() +
   geom_hline(yintercept = 1, lty=2, col = "grey") +
   labs(y ="Productivity (\U03B1)", x = "Brood year")+
-  guides(color=guide_legend(title="Conservation Unit"))
+  guides(color=guide_legend(title="Conservation Unit")) +
+  theme_sleek()
 
 my.ggsave(here("plots/Skeena/changing_productivity.PNG"))
 
@@ -372,7 +372,8 @@ a.yrs.all |>
   scale_color_viridis_d(end = 0.6) +
   geom_hline(yintercept = 1, lty=2, col = "grey") +
   labs(y ="Productivity (\U03B1)", x = "Brood year")+
-  guides(color=guide_legend(title="Conservation Unit"))
+  guides(color=guide_legend(title="Conservation Unit")) +
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/changing_productivity.PNG"))
 
@@ -393,7 +394,8 @@ ggplot() +
         panel.grid.minor = element_blank(),
         legend.key.size = unit(0.4, "cm"),
         legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
+        legend.text = element_text(size=8)) +
+  theme_sleek()
 
 my.ggsave(here("plots/TV_SR_fits.PNG"))
 
@@ -416,13 +418,9 @@ ggplot(filter(plot_data, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))
   geom_line() +
   scale_color_viridis_d() +
   facet_wrap(~obs, nrow = 2) +
-  labs(x = "Brood year", y = "Fish (thousands)")+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.4, "cm"),
-        legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
-
+  labs(x = "Brood year", y = "Fish (thousands)") +
+  theme_sleek()
+  
 my.ggsave(here("plots/Skeena/sp_har_data.PNG"))
 
 #Nass
@@ -432,12 +430,8 @@ ggplot(filter(plot_data, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")),
   geom_line() +
   scale_color_viridis_d(end = 0.6) +
   facet_wrap(~obs, nrow = 2) +
-  labs(x = "Brood year", y = "Fish (thousands)")+
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.4, "cm"),
-        legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
+  labs(x = "Brood year", y = "Fish (thousands)") +
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/sp_har_data.PNG"))
 
@@ -460,14 +454,9 @@ ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
   geom_line(aes(x = year, y = p.50/1000)) +
   geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), obs == "Harvest"), 
                          aes(x=year, y=value/1000)) +
-  facet_wrap(~CU,scales = "free", ncol = 2) +
+  facet_wrap(~CU,scales = "free_y", ncol = 2) +
   labs(x = "Brood year", y = "Harvest (thousands)") +
-  theme_minimal() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.4, "cm"),
-        legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
+  theme_sleek()
   
 my.ggsave(here("plots/Skeena/har_obs.PNG"), height = 10, width = 9)
 
@@ -477,14 +466,9 @@ ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs
   geom_line(aes(x = year, y = p.50/1000)) +
   geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs == "Harvest"), 
              aes(x=year, y=value/1000)) +
-  facet_wrap(~CU,scales = "free", ncol = 1) +
+  facet_wrap(~CU,scales = "free_y", ncol = 2) +
   labs(x = "Brood year", y = "Harvest (thousands)") +
-  theme_minimal() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.4, "cm"),
-        legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/har_obs.PNG"), height = 10, width = 9)
 
@@ -496,14 +480,9 @@ ggplot(filter(AR1.obs, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
   geom_line(aes(x = year, y = p.50/1000)) +
   geom_point(data=filter(plot_data, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), obs == "Spawners"), 
              aes(x=year, y=value/1000)) +
-  facet_wrap(~CU,scales = "free", ncol = 2) +
+  facet_wrap(~CU,scales = "free_y", ncol = 2) +
   labs(x = "Brood year", y = "Spawners (thousands)") +
-  theme_minimal() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.4, "cm"),
-        legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
+  theme_sleek()
 
 my.ggsave(here("plots/Skeena/spwn_obs.PNG"), height = 10, width = 9)
 
@@ -513,14 +492,9 @@ ggplot(filter(AR1.obs, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs
   geom_line(aes(x = year, y = p.50/1000)) +
   geom_point(data=filter(plot_data, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"), obs == "Spawners"), 
              aes(x=year, y=value/1000)) +
-  facet_wrap(~CU,scales = "free", ncol = 1) +
-  labs(x = "Brood year", y = "Spawners (thousands)") +
-  theme_minimal() +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.key.size = unit(0.4, "cm"),
-        legend.title = element_text(size=9),
-        legend.text = element_text(size=8))
+  facet_wrap(~CU,scales = "free_y", ncol = 1) +
+  labs(x = "Brood year", y = "Spawners (thousands)")+
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/spwn_obs.PNG"), height = 10, width = 9)
 
@@ -533,10 +507,10 @@ A_plot <- sp_har |>
 ggplot(filter(A_plot, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"))), 
        aes(x=year, y=value/100, fill = name)) +
   geom_area(alpha = 0.8) +  
-  theme_minimal() +
   facet_wrap(~CU) +
   scale_fill_viridis_d(name = "Age class") +
-  labs(x = "Return year", y = "Proportion at age")
+  labs(x = "Return year", y = "Proportion at age") +
+  theme_sleek()
 
 my.ggsave(here("plots/Skeena/A_obs.PNG"))
 
@@ -544,10 +518,10 @@ my.ggsave(here("plots/Skeena/A_obs.PNG"))
 ggplot(filter(A_plot, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")), 
        aes(x=year, y=value/100, fill = name)) +
   geom_area(alpha = 0.8) +  
-  theme_minimal() +
-  facet_wrap(~CU) +
+  facet_wrap(~CU, nrow=2) +
   scale_fill_viridis_d(name = "Age class") +
-  labs(x = "Return year", y = "Proportion at age")
+  labs(x = "Return year", y = "Proportion at age")+
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/A_obs.PNG"))
 
@@ -560,21 +534,21 @@ A_plot <- A_plot |>
 #individual fit EXAMPLE
 ggplot(filter(AR1.ages, CU == "Kitsumkalum"), aes(year, A.50)) +
   geom_ribbon(aes(ymin=A.25, ymax=A.75), alpha = 0.4) +
-  geom_point(data = filter(A_Plot, CU == "Kitsumkalum"), aes(x=year, y= value/100)) +
+  geom_point(data = filter(A_plot, CU == "Kitsumkalum"), aes(x=year, y= value/100)) +
   geom_line() +
   facet_wrap(~age, nrow=3) +
-  theme_minimal() +
-  labs(y= "Proportion at age", x = "Return year")
+  labs(y= "Proportion at age", x = "Return year")+
+  theme_sleek()
 
 my.ggsave(here("plots/Skeena/prop_age_example.PNG"), height = 10, width = 9)
 
 ggplot(filter(AR1.ages, CU == "Lower Nass"), aes(year, A.50)) +
   geom_ribbon(aes(ymin=A.25, ymax=A.75), alpha = 0.4) +
-  geom_point(data = filter(A_Plot, CU == "Lower Nass"), aes(x=year, y= value/100)) +
+  geom_point(data = filter(A_plot, CU == "Lower Nass"), aes(x=year, y= value/100)) +
   geom_line() +
   facet_wrap(~age, nrow=3) +
-  theme_minimal() +
-  labs(y= "Proportion at age", x = "Return year")
+  labs(y= "Proportion at age", x = "Return year")+
+  theme_sleek()
 
 my.ggsave(here("plots/Nass/prop_age_example.PNG"), height = 10, width = 9)
 
@@ -591,7 +565,7 @@ b <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper N
   labs(x = expression(italic(S[MSR])), y = "Posterior density") +
   scale_color_viridis_d() +
   scale_fill_viridis_d() +
-#  theme_sleek()   +
+  theme_sleek()   +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(),
@@ -607,7 +581,7 @@ c <- ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper N
   labs(x = expression(italic(U[MSY])), y = "Posterior density") +
   scale_color_viridis_d() +
   scale_fill_viridis_d() +
-  #theme_sleek()   +
+  theme_sleek()   +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(),
@@ -623,7 +597,7 @@ a <- ggplot(filter(par.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nas
   labs(x = "Intrinsic productivity", y = "Posterior density") +
   scale_color_viridis_d() +
   scale_fill_viridis_d() +
-  #theme_sleek()   +
+  theme_sleek()   +
   theme(legend.position = "none",
         axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -641,7 +615,7 @@ b <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Middle Nass", "Upper Nas
   labs(x = expression(italic(S[MSR])), y = "Posterior density") +
   scale_color_viridis_d(end = 0.6) +
   scale_fill_viridis_d(end = 0.6) +
-  #  theme_sleek()   +
+  theme_sleek()   +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(),
@@ -657,7 +631,7 @@ c <- ggplot(filter(bench.long, CU %in% c("Lower Nass", "Middle Nass", "Upper Nas
   labs(x = expression(italic(U[MSY])), y = "Posterior density") +
   scale_color_viridis_d(end = 0.6) +
   scale_fill_viridis_d(end = 0.6) +
-  #theme_sleek()   +
+  theme_sleek()   +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(),
@@ -670,7 +644,7 @@ a <- ggplot(filter(par.long, CU %in% c("Lower Nass", "Middle Nass", "Upper Nass"
   labs(x = "Intrinsic productivity", y = "Posterior density") +
   scale_color_viridis_d(end = 0.6) +
   scale_fill_viridis_d(end = 0.6) +
-  #theme_sleek()   +
+  theme_sleek()   +
   theme(legend.position = "none",
         axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -699,4 +673,5 @@ ggplot(filter(bench.long, !(CU %in% c("Lower Nass", "Middle Nass", "Upper Nass")
                     labels = c(expression(italic(S[recent])), expression(italic(paste("20% ",S)[MSR])),
                                expression(italic(paste("40% ",S)[MSR])))) +
   #xlim() + #set limit to 99th percentile or whatever
-  facet_wrap(~CU, scales = "free")
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek()
