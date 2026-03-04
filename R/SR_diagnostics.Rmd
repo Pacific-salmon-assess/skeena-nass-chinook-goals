@@ -1,0 +1,176 @@
+---
+title: "Supplement: Spawner-recruit model diagnostics"
+author: ""
+output: 
+  html_document:
+    collapsed: no
+    fig_caption: no
+    number_sections: no
+    smooth_scroll: yes
+    theme: cerulean
+    toc: yes
+    toc_float: yes
+include-in-header: |
+          <style>
+            h1 { font-size: 18px; }
+            h2 { font-size: 12px; }
+          </style>
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(here)
+library(tidyverse)
+library(ggplotify) #for as.ggplot() to help mcmc_combo() plotting
+library(rstan)
+library(bayesplot)
+library(kableExtra)
+
+source(here("R/data_functions.R"))
+
+# read in model fits ---------------------------------------------------------------------
+AR1.fits <- lapply(list.files(here("data/generated/model_fits/AR1"), full.names = T), 
+                   readRDS)
+
+names(AR1.fits) <- unique(sp_har$CU)
+
+TVA.fits <- lapply(list.files(here("data/generated/model_fits/TVA"), full.names = T), 
+                   readRDS)
+names(TVA.fits) <- unique(sp_har$CU)
+```
+
+This document provides diagnostic plots for several spawner-recruit models that were used to characterize Skeena and Nass Chinook salmon population dynamics.
+
+*brief methods description once finalized*
+
+# Diagnostics
+
+We fit the spawner-recruitment model in a Bayesian estimation framework with Stan (Carpenter et al. 2017; Stan Development Team 2023), which implements the No-U-Turn Hamiltonian Markov chain Monte Carlo algorithm (Hoffman and Gelman 2014)) for Bayesian statistical inference to generate a joint posterior probability distribution of all unknowns in the model. The models can be found [here](https://gitlab.com/yukon-jtc/escapement-goal-group/yukon-chum-imeg/-/tree/main/src/Stan?ref_type=heads).We sampled from 4 chains with ***2,000*** iterations each and discarded the first half as warm-up. We assessed chain convergence visually via trace plots and by ensuring that $\hat{R}$ (potential scale reduction factor; Vehtari et al. 2021) was less than 1.1 and that the effective sample size was greater than 200. Posterior predictive checks were used to make sure the model returned known values, by simulating new datasets and checking how similar they were to our observed data.
+
+## Trace plots
+
+These should be clearly mixed, with no single distribution deviating substantially from others (left column), and no chains exploring a strange space for a few iterations (right column). "D_scale" is the $D$ term in equation C.4 in the research document and governs variability of age proportion vectors across cohorts."Dir_alpha" refers to Dirichlet shape parameter for the gamma distribution used to generate vector of age-at-maturity proportions.
+
+```{r diagnostics, results = 'asis'}
+# describe diagnostics in loop -----------------------------------------------------------
+min_ESS_AR1 <- NULL
+max_Rhat_AR1 <- NULL
+min_ESS_TVA <- NULL
+max_Rhat_TVA <- NULL
+
+for(i in unique(sp_har$CU)){
+  sub_dat <- filter(sp_har, CU==i)
+  cat('\n')
+  cat("### ", i, "\n") #escape loop and print CU name
+  #diagnostics associated w/ AR1 model---
+  sub_AR1_summary <- as.data.frame(rstan::summary(AR1.fits[[i]])$summary)
+  
+  sub_AR1_pars <- rstan::extract(AR1.fits[[i]])
+  
+  min_ESS_AR1 <- rbind(min_ESS_AR1, data.frame(CU=i, 
+                                       ESS=round(min(sub_AR1_summary$n_eff, na.rm=T))))
+  
+  max_Rhat_AR1 <- rbind(max_Rhat_AR1, data.frame(CU=i, 
+                                         Rhat=round(max(sub_AR1_summary$Rhat, na.rm=T), 3)))
+  
+  R <- (sub_dat$harv+sub_dat$spwn)
+  R_rep <- sub_AR1_pars$H_rep[1:500,] + sub_AR1_pars$S_rep[1:500,]
+  
+  p <- ppc_dens_overlay(R, R_rep) +
+    xlim(NA, quantile(R_rep, 0.99)) +
+    theme(legend.position = "none") +
+    labs(y = "density", x = "y_est", title = "AR1 posterior predictive check")
+  print(p)
+  
+  p <- mcmc_combo(AR1.fits[[i]], pars = c("S_max", "lnalpha", "sigma_R", "phi"),
+             combo = c("dens_overlay", "trace"),
+             gg_theme = legend_none()) |>
+    as.ggplot() + 
+    labs(title = "AR1 leading parameters")
+  print(p)
+
+  p <- mcmc_combo(AR1.fits[[i]], pars = c("D_scale"),
+             combo = c("dens_overlay", "trace"),
+             gg_theme = legend_none())|> 
+    as.ggplot() +
+    labs(title = "AR1 age pars")
+    print(p)
+
+  p <- mcmc_combo(AR1.fits[[i]], pars = c("Dir_alpha[1]", "Dir_alpha[2]", 
+                               "Dir_alpha[3]"),
+             combo = c("dens_overlay", "trace"),
+             gg_theme = legend_none())|> 
+    as.ggplot() +
+    labs(title = "AR1 age probs")
+    print(p)
+
+  #diagnostics associated w/ TVA model---
+  sub_TVA_summary <- as.data.frame(rstan::summary(TVA.fits[[i]])$summary)
+  
+  sub_TVA_pars <- rstan::extract(TVA.fits[[i]])
+  
+  min_ESS_TVA <- rbind(min_ESS_TVA, data.frame(CU=i, 
+                                               ESS=round(min(sub_TVA_summary$n_eff, na.rm=T))))
+  
+  max_Rhat_TVA <- rbind(max_Rhat_TVA, data.frame(CU=i, 
+                                                 Rhat=round(max(sub_TVA_summary$Rhat, na.rm=T), 3)))
+  
+  R <- (sub_dat$harv+sub_dat$spwn)
+  R_rep <- sub_TVA_pars$H_rep[1:500,] + sub_TVA_pars$S_rep[1:500,]
+  
+  p <- ppc_dens_overlay(R, R_rep) +
+    xlim(NA, quantile(R_rep, 0.99)) +
+    theme(legend.position = "none") +
+    labs(y = "density", x = "y_est", title = "TV posterior predictive check")
+  print(p)
+  
+  p <- mcmc_combo(TVA.fits[[i]], pars = c("ln_alpha0", "S_max", "F_rw", "mean_ln_R0"), 
+                  combo = c("dens_overlay", "trace"),
+                  gg_theme = legend_none()) |> 
+    as.ggplot() +
+    labs(title =  "TV leading parameters")
+    print(p)
+    
+  p <- mcmc_combo(TVA.fits[[i]], pars = c("sigma_alpha", "sigma_R", "sigma_tot"), 
+                  combo = c("dens_overlay", "trace"),
+                  gg_theme = legend_none()) |> 
+    as.ggplot() +
+    labs(title =  "TV variance components")
+    print(p)
+
+  p <- mcmc_combo(TVA.fits[[i]], pars = c("D_scale"),
+                  combo = c("dens_overlay", "trace"),
+                  gg_theme = legend_none())|> 
+    as.ggplot() +
+    labs(title = "TV age pars")
+    print(p)
+
+  p <- mcmc_combo(TVA.fits[[i]], pars = c("Dir_alpha[1]", "Dir_alpha[2]", 
+                                          "Dir_alpha[3]"),
+                  combo = c("dens_overlay", "trace"),
+                  gg_theme = legend_none())|> 
+    as.ggplot() +
+    labs(title = "TV age probs")
+    print(p)
+      cat('\n')
+}
+```
+
+## ESS and $\hat{R}$
+
+We aimed for minimum effective sample sizes that are greater than ***200*** and $\hat{R}$ values less than 1.1.The tables below summarize the lowest effective sample size (ESS) and largest $\hat{R}$ across all estimated parameters for each CU and class of model.
+
+### AR1 model:
+
+```{r AR1-diag}
+AR1.diag <- left_join(min_ESS_AR1, max_Rhat_AR1, by = "CU")
+kable(AR1.diag)
+```
+
+### Time varying (TV) model:
+
+```{r TV-diag}
+TVA.diag <- left_join(min_ESS_TVA, max_Rhat_TVA, by = "CU")
+kable(TVA.diag)
+```
