@@ -1,0 +1,230 @@
+---
+title: "Skeena and Nass Chinook Salmon Spawner-recruit Analysis"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+author: ""
+output:
+  html_document: 
+    fig_caption: true
+    toc: true
+    toc_depth: 2
+    toc_float: true
+---
+
+<style type="text/css">
+.caption {
+    font-size: large;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+library(here)
+library(tidyverse)
+library(gsl)
+library(ggcorrplot)
+library(ggpubr)
+library(viridis)
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE, message = FALSE, 
+                      fig.width = 6,fig.height = 4, dpi = 300)
+```
+
+
+```{r read and wrangle data}
+# read data
+source(here("R/SR_posterior_processing.R")) #can take some time
+```
+
+State-space spawner-recruit models were fit [here](https://github.com/Pacific-salmon-assess/skeena-nass-chinook-goals/blob/main/R/SRR_fit.R), and model validation can be found [here](https://github.com/Pacific-salmon-assess/skeena-nass-chinook-goals/blob/main/R/SR_diagnostics.Rmd). Below we explore the output from these models. 
+
+# Skeena  
+
+## Spawner-recruit fits 
+
+```{r static fit}
+# SR fits ----
+ggplot() +
+  geom_abline(intercept = 0, slope = 1,col="dark grey") +
+  geom_ribbon(data = filter(SR.preds, SMU == "Skeena"), 
+              aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
+              fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
+  geom_errorbar(data = filter(brood.all, SMU == "Skeena"), 
+                aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
+                colour="grey", width=0, linewidth=0.3) +
+  geom_errorbar(data = filter(brood.all, SMU == "Skeena"), 
+                 aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
+                 height=0, colour = "grey", linewidth = 0.3) +
+  geom_point(data = filter(brood.all, SMU == "Skeena"),
+             aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
+  geom_line(data = filter(SR.preds, SMU == "Skeena"), 
+            aes(x = Spawn/1000, y = Rec_med/1000)) +
+  facet_wrap(~CU, scales = "free") +
+  scale_colour_viridis_c(name = "Brood Year")+
+  labs(x = "Spawners (000s)", y = "Recruits (000s)") +
+  theme_sleek()
+```
+
+And a fit with time-varying productivity (Ricker $\alpha$):
+
+```{r tv alpha fit}
+a.yrs.all |>
+  filter(SMU == "Skeena", 
+         brood_year < max(a.yrs.all$brood_year)-a_max) |> # index fully observed rec
+  ggplot(aes(color=CU)) +
+  geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
+  scale_color_viridis_d() +
+  geom_hline(yintercept = 1, lty=2, col = "grey") +
+  labs(y ="Productivity (\U03B1)", x = "Brood year")+
+  guides(color=guide_legend(title="Stock")) +
+  theme_sleek() +
+  theme(legend.position = "bottom") 
+  
+# TV SR fits ----
+ggplot() +
+  geom_point(data = filter(brood.all, SMU == "Skeena"),
+             aes(x = S_med/1000,
+                 y = R_med/1000),
+             size = 1.5) +
+  geom_line(data = filter(TV.SR.preds, SMU == "Skeena"), aes(x = spw/1000, y = pred.R/1000, color = year, group = year)) +
+  facet_wrap(~CU, scales = "free") +
+  scale_colour_viridis_c(name = "Brood Year")+
+  geom_abline(intercept = 0, slope = 1,col="dark grey") +
+  labs(x = "Spawners (000s)",
+       y = "Recruits (000s)",
+       title = "Time varying productivity spawner-recruit fits") +
+  theme_sleek()
+```
+
+We also check residuals from both models:
+
+```{r residuals}
+# AR1 resids ----
+ggplot(filter(AR1.resids, SMU == "Skeena"), aes(x=year, y = mid)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "darkgrey", alpha = 0.5) +
+  geom_ribbon(aes(ymin = midlwr, ymax = midupr),  fill = "black", alpha=0.2) +
+  geom_line(lwd = 1.1) +
+  coord_cartesian(ylim=c(-2,2)) +
+  labs(x = "Return year",
+       y = "Recruitment residuals",
+       title = "AR1 recruitment residuals") +
+  facet_wrap(~CU) +
+  theme(legend.position = "none",
+        panel.grid = element_blank()) +
+  theme_sleek() +
+  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
+
+
+# TV resids ----
+ggplot(filter(TV.resids, SMU == "Skeena"), aes(x=year, y = mid)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "darkgrey", alpha = 0.5) +
+  geom_ribbon(aes(ymin = midlwr, ymax = midupr),  fill = "black", alpha=0.2) +
+  geom_line(lwd = 1.1) +
+  labs(x = "Return year",
+       y = "Recruitment residuals",
+       title = "Time-varying recruitment residuals") +
+  facet_wrap(~CU, scales = "free") +
+  theme(legend.position = "none",
+        panel.grid = element_blank()) +
+  theme_sleek() +
+  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
+```
+
+```{r spawners}
+bench_plot <- filter(bench.par.table, SMU == "Skeena", 
+                     bench.par %in% c("Smsr", "Smsr.20", "Smsr.40")) |>
+  select(CU, bench.par, '50%')
+
+ggplot(filter(AR1.spwn, SMU == "Skeena"), aes(year, S.50/1000)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), fill = "darkgrey", alpha = 0.5) +
+  geom_hline(data = bench_plot, 
+             aes(yintercept = `50%`/1000, col = bench.par), lty = "dashed") +
+    scale_colour_manual(values=c(Smsr = "pink3",
+                               Smsr.20 = "darkred",
+                               Smsr.40 = "forestgreen"),
+                      labels=c(Smsr.40 = expression(paste("40%", S[MSR])),
+                               Smsr = expression(S[MSR]),
+                               Smsr.20 = expression(paste("20%", S[MSR])))) +
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek() +
+  labs(x = "Retun Year", y = "Spawners (000s)", col = "")
+
+```
+
+```{r bench-posts}
+bench.long <- select(bench.posts, CU, SMU, Smsr.20, Smsr.40, S.recent) |>
+  pivot_longer(cols = c(Smsr.20, Smsr.40, S.recent),
+                           names_to = "par") |>  
+  arrange(CU, par, value) |>
+  group_by(CU, par) |>
+  filter(between(value, quantile(value, 0.05), quantile(value, 0.95)), 
+         SMU == "Skeena") 
+
+ggplot(bench.long, aes(value/1000, fill = par, color = par)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(xintercept = 1.5, lty=2, col="grey") +
+  facet_wrap(~CU, scales = "free") +
+  scale_fill_manual(breaks = c("S.recent", "Smsr.20", "Smsr.40"),
+                    values = c("black", "darkred", "forestgreen"),
+                    aesthetics = c("fill", "color"),
+                    labels = c(expression(italic(S[recent])), 
+                               expression(italic(paste("20% ",S)[MSR])),
+                               expression(italic(paste("40% ",S)[MSR])))) +
+  labs(x = "Spawners (000s)", y = "Posterior density", fill = "", color = "") +
+  theme_sleek()
+```
+
+```{r age-time}
+if(FALSE){ #turn off for now
+ages_long <- pivot_longer(age_props, -year, names_to = "age") |>
+  arrange(desc(age)) |>
+  mutate(age = gsub("A", "", age)) |>
+  mutate(age = as.factor(age), ordered = TRUE)
+
+ggplot(ages_long, aes(year, value, color = age, fill = age)) +
+  geom_col(position = position_stack(reverse = TRUE), width = 1) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +  
+  labs(x = "Return year", y = "Proportion-at-age", 
+       title = "Run age composition through time", color = "Age", fill = "Age") +
+  theme_sleek()
+
+ggplot(AR1.ages, aes(year, A.50, fill = as.factor(age), color = as.factor(age))) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~stock) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  labs(x = "Return year", y = "Proportion", fill = "Age", color = "Age", 
+       title = "Model estimated proportions at age") +
+  theme_sleek()
+}
+```
+
+```{r Smax post-prior}
+if(FALSE){ #might belong in SR_diagnostics.Rmd
+#get Smax posterior
+S_max_plot_data <- sp_har |>
+  group_by(stock) |>
+  summarise(rnorm(nrow(par.posts)/length(unique(sp_har$stock)), 
+                  max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
+  cbind(par.posts$S_max) 
+  
+colnames(S_max_plot_data) <- c("stock", "prior", "posterior")
+
+S_max_plot_data <- S_max_plot_data |>
+  pivot_longer(-stock, names_to = "par")|>
+  filter(value>0) |>
+  group_by(stock) |>
+  filter(value < quantile(value, 0.99))
+
+ggplot(S_max_plot_data, aes(value/1000)) +
+  geom_density(aes(fill = par), alpha = 0.5) +
+  facet_wrap(~stock, scales = "free") +
+  labs(x = "S_max (000s)", fill = "") +
+    theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
+}
+```
+
+# Nass  

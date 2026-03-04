@@ -246,7 +246,29 @@ colnames(TV.resids) <- c("year","lwr","midlwr","mid","midupr","upr", "CU")
 colnames(TV.spwn) <- c("S.25", "S.50", "S.75", "CU", "year")
 colnames(TV.harv) <- c("H.25", "H.50", "H.75", "CU", "year")
 
-# write important tables to repo ---------------------------------------------------------
+#add SMU to output
+CU_SMU <- sp_har |>
+  select(CU, SMU) |>
+  distinct()
+
+a.yrs.all <- left_join(a.yrs.all, CU_SMU, by = "CU") #coulda map()'d this i guess... 
+AR1.ages <- left_join(AR1.ages, CU_SMU, by = "CU")
+AR1.harv <- left_join(AR1.harv, CU_SMU, by = "CU")
+AR1.resids <- left_join(AR1.resids, CU_SMU, by = "CU")
+AR1.spwn <- left_join(AR1.spwn, CU_SMU, by = "CU")
+bench.par.table <- left_join(bench.par.table, CU_SMU, by = "CU")
+bench.posts <- left_join(bench.posts, CU_SMU, by = "CU")
+brood.all <- left_join(brood.all, CU_SMU, by = "CU")
+brood.all.long <- left_join(brood.all.long, CU_SMU, by = "CU")
+par.posts <- left_join(par.posts, CU_SMU, by = "CU")
+par.posts.tva <- left_join(par.posts.tva, CU_SMU, by = "CU")
+TV.harv.quant <- left_join(TV.harv.quant, CU_SMU, by = "CU")
+TV.resids <- left_join(TV.resids, CU_SMU, by = "CU")
+TV.spwn <- left_join(TV.spwn, CU_SMU, by = "CU")
+TV.SR.preds <- left_join(TV.SR.preds, CU_SMU, by = "CU")
+tva.par.summary.out <- left_join(tva.par.summary.out, CU_SMU, by = "CU")
+
+  # write important tables to repo ---------------------------------------------------------
 bench.par.table.out <- bench.par.table |> # AR1 SR model pars and benchmarks
   relocate(CU, 1) |>
   relocate(bench.par, .after = 1) |>
@@ -262,4 +284,4 @@ rm(a.yrs, AR1.fits, bench, bench.quant, brood_t, brood_t.long, par, par_TVA, par
    par.summary, pars, pred, rec.quant, rec.quant.long, resid.quant, resids, spwn.quant, 
    spwn.quant.long, SR.pred, sub_age, sub_dat, sub_pars, sub_pars_TVA, sub.bench.par.table,
    TV.harv, TV.spwn.quant, TVA.fits, tva.par.summary, alpha, b, beta, i, j, ln_a, 
-   ln_alpha_yr, mean, ny, phi, sigma, spw)
+   ln_alpha_yr, mean, phi, sigma, spw, sub_benchmarks)
