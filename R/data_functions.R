@@ -30,6 +30,7 @@ for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
 }
 
 A_obs <- A_obs |>
+  mutate(`6` = `6` +`7`) |>
   rename(a4 = `4`, 
          a5 = `5`, 
          a6 = `6`) |>
@@ -81,11 +82,18 @@ nass_sp_har_agg <- nass_sp_har |>
 nass_sp_har <- bind_rows(nass_sp_har, nass_sp_har_agg)
 
 #bind skeena and nass
+prop_age <- bind_rows(A_obs, nass_A_obs) |> #for plotting later
+  mutate(a4 = a4/100, 
+         a5 = a5/100, 
+         a6 = a6/100) |>
+  relocate(SMU, .after = 1)
+
 A_obs <- bind_rows(A_obs, nass_A_obs) |>
   mutate_if(is.numeric, round, 0)
 
 sp_har <- bind_rows(sp_har, nass_sp_har) |>
-  filter(!is.na(spwn))
+  filter(!is.na(spwn)) |>
+  relocate(SMU, .after=1)
 
 #check timeseries of complete dataset
 A_obs |>
@@ -102,8 +110,9 @@ sp_har <- left_join(sp_har, A_obs, by = c("CU", "year", "SMU")) |>
   filter(!is.na(a4)) |> #remove years of NA age obs once joined
   mutate(harv_cv = 0.3, #assumed harvest CV
          spwn_cv = replace_na(spwn_cv, 0.5)) |> #replace unknown CVs with assumed
-  arrange(CU, year) |>
-  as.data.frame()
+  arrange(CU, year) |> 
+  relocate(harv_cv, .after = spwn_cv) |>
+  as.data.frame() 
 
 #calc other indicies
 a_min <- 4
