@@ -38,6 +38,77 @@ State-space spawner-recruit models were fit [here](https://github.com/Pacific-sa
 
 # Skeena  
 
+## Data   
+```{r sp_har}
+sp_har_fig <- sp_har |>
+  group_by(CU, year) |>
+  #calculate random observation error, 4000 = iter
+  mutate(spwn_LCI = quantile(rnorm(4000, spwn, spwn_cv*spwn), 0.1),  
+         spwn_UCI = quantile(rnorm(4000, spwn, spwn_cv*spwn), 0.9), 
+         harv_LCI = quantile(rnorm(4000, harv, harv_cv*harv), 0.1),  
+         harv_UCI = quantile(rnorm(4000, harv, harv_cv*harv), 0.9))
+
+ggplot(filter(sp_har_fig, SMU == "Skeena"), aes(year, spwn/1000)) +
+  geom_ribbon(aes(xintercept = year, ymin = spwn_LCI/1000, ymax = spwn_UCI/1000), 
+                width = 0, fill = "grey") +
+  geom_line() +
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Spawners (000s) and 80th percentile")
+
+ggplot(filter(sp_har_fig, SMU == "Skeena"), aes(year, harv/1000)) +
+  geom_ribbon(aes(xintercept = year, ymin = harv_LCI/1000, ymax = harv_UCI/1000), 
+                width = 0, fill = "grey") +
+  geom_line() +
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest (000s) and 80th percentile")
+```
+
+```{r age props}
+prop_age |>
+  pivot_longer(4:6, names_to = "age") |>
+  filter(SMU == "Skeena") |>
+  mutate(age = gsub("a", "", age)) |>
+ggplot(aes(year, value, fill = age)) +
+  geom_col(position = position_stack(reverse = TRUE), width = 1) +
+  scale_fill_viridis_d() +
+  facet_wrap(~CU) +
+  theme_sleek() +
+  labs(x = "Return year", y = "Proportion-at-age", fill = "Age")
+```
+
+## Priors  
+
+Here, we look specifically at the $S_{Max}$ prior, as some may consider it "informative".
+This prior is a normal distribution with a mean of half the maximum observed spawners, and a standard deviation of 1.5 times the maximum observed spawners.  
+
+```{r Smax_prior}
+S_max_plot_data <- sp_har |>
+  filter(SMU == "Skeena") |>
+  group_by(CU) |>
+  summarise(rnorm(nrow(filter(par.posts, SMU == "Skeena"))/length(unique(filter(sp_har, SMU == "Skeena")$CU)), 
+                  max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
+  cbind(filter(par.posts, SMU == "Skeena")$S_max) 
+  
+colnames(S_max_plot_data) <- c("CU", "prior", "posterior")
+
+S_max_plot_data <- S_max_plot_data |>
+  pivot_longer(-CU, names_to = "par")|>
+  filter(value>0) |>
+  group_by(CU) |>
+  filter(value < quantile(value, 0.99))
+
+ggplot(S_max_plot_data, aes(value/1000)) +
+  geom_density(aes(fill = par, color = par), alpha = 0.5) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_Max (000s)", fill = "", color = "") +
+  theme_sleek()
+
+```
+
 ## Spawner-recruit fits 
 
 ```{r static fit}
@@ -63,6 +134,26 @@ ggplot() +
   theme_sleek()
 ```
 
+Latent (i.e., hidden) states of spawners and recruits fir in the spawner-recruit model  
+```{r latent states}
+ggplot(filter(AR1.spwn, SMU == "Skeena"), aes(year, S.50/1000)) +
+  geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), 
+              fill = "grey") +
+  geom_line() +
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Spawners (000s) and 50th percentile")
+
+ggplot(filter(AR1.harv, SMU == "Skeena"), aes(year, H.50/1000)) +
+  geom_ribbon(aes(ymin = H.25/1000, ymax = H.75/1000), 
+              fill = "grey") +
+  geom_line() +
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
+```
+
+
 And a fit with time-varying productivity (Ricker $\alpha$):
 
 ```{r tv alpha fit}
@@ -78,7 +169,18 @@ a.yrs.all |>
   theme_sleek() +
   theme(legend.position = "bottom") 
   
-# TV SR fits ----
+a.yrs.all |>
+  filter(SMU == "Skeena", 
+         brood_year < max(a.yrs.all$brood_year)-a_max) |> # index fully observed rec
+  ggplot() +
+  geom_ribbon(aes(x = brood_year, ymin = lwr, ymax = upr), fill = "grey") +
+  geom_line(aes(x = brood_year , y = mid)) +
+  geom_hline(yintercept = 1, lty=2, col = "grey") +
+  labs(y ="Productivity (\U03B1) and 80th percentile", x = "Brood year")+
+  facet_wrap(~CU, scales = "free") +
+  theme_sleek() +
+  theme(legend.position = "bottom") 
+
 ggplot() +
   geom_point(data = filter(brood.all, SMU == "Skeena"),
              aes(x = S_med/1000,
@@ -128,6 +230,21 @@ ggplot(filter(TV.resids, SMU == "Skeena"), aes(x=year, y = mid)) +
   geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
 ```
 
+```{r benchmarks}
+bench.posts |>
+  filter(SMU == "Skeena") |>
+  select(CU, Sgen, Smsy, Umsy) |>
+  pivot_longer(-1, names_to = "par") |>
+  group_by(CU) |>
+  filter(value < quantile(value, 0.90)) |>
+  ggplot(aes(value, fill = CU, color = CU)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~par, nrow = 3, scales = "free") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek()
+```
+
 ```{r spawners}
 bench_plot <- filter(bench.par.table, SMU == "Skeena", 
                      bench.par %in% c("Smsr", "Smsr.20", "Smsr.40")) |>
@@ -147,7 +264,6 @@ ggplot(filter(AR1.spwn, SMU == "Skeena"), aes(year, S.50/1000)) +
   facet_wrap(~CU, scales = "free") +
   theme_sleek() +
   labs(x = "Retun Year", y = "Spawners (000s)", col = "")
-
 ```
 
 ```{r bench-posts}
@@ -173,58 +289,8 @@ ggplot(bench.long, aes(value/1000, fill = par, color = par)) +
   theme_sleek()
 ```
 
-```{r age-time}
-if(FALSE){ #turn off for now
-ages_long <- pivot_longer(age_props, -year, names_to = "age") |>
-  arrange(desc(age)) |>
-  mutate(age = gsub("A", "", age)) |>
-  mutate(age = as.factor(age), ordered = TRUE)
 
-ggplot(ages_long, aes(year, value, color = age, fill = age)) +
-  geom_col(position = position_stack(reverse = TRUE), width = 1) +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +  
-  labs(x = "Return year", y = "Proportion-at-age", 
-       title = "Run age composition through time", color = "Age", fill = "Age") +
-  theme_sleek()
 
-ggplot(AR1.ages, aes(year, A.50, fill = as.factor(age), color = as.factor(age))) +
-  geom_bar(stat = "identity") +
-  facet_wrap(~stock) +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
-  labs(x = "Return year", y = "Proportion", fill = "Age", color = "Age", 
-       title = "Model estimated proportions at age") +
-  theme_sleek()
-}
-```
-
-```{r Smax post-prior}
-if(FALSE){ #might belong in SR_diagnostics.Rmd
-#get Smax posterior
-S_max_plot_data <- sp_har |>
-  group_by(stock) |>
-  summarise(rnorm(nrow(par.posts)/length(unique(sp_har$stock)), 
-                  max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
-  cbind(par.posts$S_max) 
-  
-colnames(S_max_plot_data) <- c("stock", "prior", "posterior")
-
-S_max_plot_data <- S_max_plot_data |>
-  pivot_longer(-stock, names_to = "par")|>
-  filter(value>0) |>
-  group_by(stock) |>
-  filter(value < quantile(value, 0.99))
-
-ggplot(S_max_plot_data, aes(value/1000)) +
-  geom_density(aes(fill = par), alpha = 0.5) +
-  facet_wrap(~stock, scales = "free") +
-  labs(x = "S_max (000s)", fill = "") +
-    theme(axis.ticks.y = element_blank(),
-        axis.text.y = element_blank(),
-        legend.title=element_blank(), 
-        legend.position = "bottom")
-}
-```
+## Demographics 
 
 # Nass  
