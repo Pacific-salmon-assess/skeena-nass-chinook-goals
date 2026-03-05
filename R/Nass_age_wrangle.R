@@ -119,21 +119,16 @@ nass_age_length_raw <- nass_ages |>
 nass_age_length_raw_fem <- nass_age_length_raw |> filter(Sex == "F")
 plot(nass_age_length_raw_fem$MEF ~ nass_age_length_raw_fem$NFL)
 lm(nass_age_length_raw_fem$MEF ~ nass_age_length_raw_fem$NFL)
+
 nass_age_length_infill <- nass_age_length_raw |> 
-  filter(Sex == "F",
-         Year < 2011) |>
-  mutate(MEF = 2.225 + NFL*0.8907) |>
+  filter(Sex == "F") |>
+  mutate(MEF = case_when(
+    Year < 2011 ~ 2.225 + NFL*0.8907,
+    Year > 2010 ~ MEF))
+ 
+nas_fem_avg_len <- nass_age_length_infill|>
   group_by(Year, age) |>
-  summarise(mean_length = mean(MEF, na.rm = T)) 
-
-nas_fem_avg_len_2011plus <- nass_age_length_raw |> 
-  filter(Sex == "F",
-         Year > 2010) |>
-  group_by(Year, age) |>
-  summarise(mean_length = mean(MEF, na.rm = T))
-
-nas_fem_avg_len <- rbind(nass_age_length_infill,nas_fem_avg_len_2011plus)|>
-  group_by(Year, age) |>
+  summarise(mean_length = mean(MEF, na.rm = T)) |>
   mutate(fecundity = 9.35e-4*(mean_length*10)^2.36,
          egg_mass = 8.71e-12*(mean_length*10)^4.83)
 
@@ -169,8 +164,8 @@ a <- ggplot(nass_sex_ratio, aes(x = Year, y= ratio/100, fill= as.factor(Sex))) +
   labs(fill = "Sex") +
   theme(legend.position = "top")
 
-b <- ggplot(nass_age_length_raw |> filter(Sex == "F"), aes(x = Year, y = MEF)) +
-   stat_summary(fun = mean, geom = "point", size = 3,col="dark grey") + # Add points for the mean
+b <- ggplot(nass_age_length_infill |> filter(Sex == "F"), aes(x = Year, y = MEF)) +
+   stat_summary(fun = mean, geom = "point", size = 2, col="dark grey") + # Add points for the mean
    stat_summary(
      fun.data = mean_cl_boot, # Calculate mean and standard error
      geom = "errorbar",
