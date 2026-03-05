@@ -1,7 +1,7 @@
 # script for wrangling raw age data from LGL 
 library(tidyverse)
 library(here)
-library(ggsidekick)
+source(here("R/data_functions.R"))
 
 # read in and wrangle data ----
 nass_ages_raw <- read.csv(here("data/Upper lower coastal Nass Chinook ages 1989-2025.csv"))
@@ -207,4 +207,5 @@ g <- ggarrange(a,b,c,d,
 
 
 g
+my.ggsave(here("plots/Nass/repro-potential.PNG"))
 
