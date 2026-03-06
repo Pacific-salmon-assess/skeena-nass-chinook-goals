@@ -45,12 +45,10 @@ ggplot(skeena_ASL, aes(x = Year, y = hypural_length_mm)) +
 # process data for multipanel plot -------------------------------------------------------
 kitsumkalum_ASL <- skeena_ASL |>
   filter(CU == "Kitsumkalum", 
-         age %in% c(4,5,6)) 
+         age %in% c(4,5,6), 
+         Sex != "u") 
   
-kitsumkalum_sex_age_comps <- skeena_ASL |>
-  filter(CU == "Kitsumkalum",
-         between(age,4,6), 
-         Sex != "u")|>
+kitsumkalum_sex_age_comps <- kitsumkalum_ASL |>
   count(Year, Sex, age) |>
   group_by(Year) |>
   mutate(year_total = sum(n),
