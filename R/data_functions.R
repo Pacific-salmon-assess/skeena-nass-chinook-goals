@@ -88,19 +88,22 @@ prop_age <- bind_rows(A_obs, nass_A_obs) |> #for plotting later
          a6 = a6/100) |>
   relocate(SMU, .after = 1)
 
-# correct Skeena for uneven ESS - STILL NEED TO DO FOR NASS! 
-ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + skrunchy2025::n_age_observations[,,2] + skrunchy2025::n_age_observations[,,2]) |>
-  as.data.frame() |>
-  mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
-  pivot_longer(-year, names_to = "CU") |>
-  rename(ESS = value)
+if(FALSE){ #NEED TO FIX THIS LATER - IT'S DROPPING AGES
+  # correct Skeena for uneven ESS - STILL NEED TO DO FOR NASS! 
+  ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + skrunchy2025::n_age_observations[,,2] + skrunchy2025::n_age_observations[,,2]) |>
+    as.data.frame() |>
+    mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
+    pivot_longer(-year, names_to = "CU") |>
+    rename(ESS = value)
+  
+  A_obs <- A_obs |>
+    left_join(ESS_Skeena, by = c("CU", "year")) |>
+    mutate(a4 = (a4/100)*ESS, #revet fromm scaled to 100 to calculated ESS. 
+           a5 = (a5/100)*ESS, 
+           a6 = (a6/100)*ESS) |>
+    select(-ESS)
+}
 
-A_obs <- A_obs |>
-left_join(ESS_Skeena, by = c("CU", "year")) |>
-  mutate(a4 = (a4/100)*ESS, #revet fromm scaled to 100 to calculated ESS. 
-         a5 = (a5/100)*ESS, 
-         a6 = (a6/100)*ESS) |>
-  select(-ESS)
 
 A_obs <- bind_rows(A_obs, nass_A_obs) |>
   mutate_if(is.numeric, round, 0)
