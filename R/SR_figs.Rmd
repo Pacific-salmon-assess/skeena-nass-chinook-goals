@@ -240,9 +240,10 @@ ggplot(filter(TV.resids, SMU == "Skeena"), aes(x=year, y = mid)) +
 
 ```{r benchmarks}
 bench.posts |>
-  filter(SMU == "Skeena") |>
+  filter(SMU == "Skeena", 
+         CU != "Skeena Aggregate") |>
   select(CU, Smsy, Umsy) |>
-  cbind(ln_a = filter(par.posts, SMU == "Skeena")$ln_a) |>
+  cbind(ln_a = filter(par.posts, SMU == "Skeena", CU != "Skeena Aggregate")$ln_a) |>
   pivot_longer(-1, names_to = "par") |>
   group_by(CU) |>
   filter(value < quantile(value, 0.90)) |>
@@ -355,16 +356,6 @@ c <- ggplot(filter(bench_compare, par %in% c("Seq", "Smsr")),
   labs(x = "Conservation Unit", y = "")
 
 cowplot::plot_grid(a, b, c, labels="auto", ncol=1,rel_heights=c(0.6,0.6,1))
-
-
-```
-
-## Demographics 
-
-```{r demography}
-#this may belong in another file somewhere 
-
-
 ```
 
 # Nass  
