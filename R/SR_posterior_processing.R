@@ -82,8 +82,10 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   #SR relationship based on full posterior---
   spw <- seq(0,max(brood_t$S_upr),length.out=100)
   SR.pred <- matrix(NA,length(spw), length(sub_pars$lnalpha))
-  bench <- matrix(NA,length(sub_pars$lnalpha),8,
-                  dimnames = list(seq(1:length(sub_pars$lnalpha)), c("Sgen", "Smsy", "Umsy", "Seq", "Smsr", "S.recent","Smsr.20","Smsr.40")))
+  bench <- matrix(NA,length(sub_pars$lnalpha),9,
+                  dimnames = list(seq(1:length(sub_pars$lnalpha)), c("Sgen", "Smsy", "Umsy", 
+                                                                     "Seq", "Smsr", "S.recent",
+                                                                     "Smsr.20","Smsr.40", "Smsy.80")))
   
   par <- matrix(NA,length(sub_pars$lnalpha),4,
                 dimnames = list(seq(1:length(sub_pars$lnalpha)), c("sample","ln_a","beta", "S_max")))
@@ -118,6 +120,7 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
     bench[j,6] <- exp(mean(log(sub_pars$S[j, (nyrs-5):nyrs]))) #S recent - mean spawners in last generation
     bench[j,7] <- (1/b)*0.2
     bench[j,8] <- (1/b)*0.4
+    bench[j,9] <- get_Smsy(ln_a, b)*0.8 # 80% Smsy
     
     par[j,1] <- j
     par[j,2] <- ln_a
@@ -137,10 +140,10 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   
   par.posts <- rbind(par.posts, as.data.frame(par) |> mutate(CU = i))
   
-  bench.quant <- apply(bench[,1:8], 2, quantile, probs = probs_80, na.rm=T) |>
+  bench.quant <- apply(bench[,1:9], 2, quantile, probs = probs_80, na.rm=T) |>
     t()
   
-  mean <- apply(bench[,1:8],2,mean, na.rm=T) #get means of each
+  mean <- apply(bench[,1:9],2,mean, na.rm=T) #get means of each
   
   sub_benchmarks <- cbind(bench.quant, mean) |>
     as.data.frame() |>
@@ -269,14 +272,17 @@ TV.SR.preds <- left_join(TV.SR.preds, CU_SMU, by = "CU")
 tva.par.summary.out <- left_join(tva.par.summary.out, CU_SMU, by = "CU")
 
   # write important tables to repo ---------------------------------------------------------
-bench.par.table.out <- bench.par.table |> # AR1 SR model pars and benchmarks
+bench.par.table <- bench.par.table |> # AR1 SR model pars and benchmarks
   relocate(CU, 1) |>
-  relocate(bench.par, .after = 1) |>
-  relocate(mean, .after = 2) |>
-  mutate_at(3:7, ~round(.,5)) |>
+  relocate(SMU, .after = 1) |>
+  relocate(bench.par, .after = 2) |>
+  relocate(mean, .after = 3) |>
+  mutate_at(4:7, ~round(.,5)) |>
   arrange(bench.par, CU)
 
-write.csv(bench.par.table.out, here("data/generated/bench_par_table.csv"),
+colnames(bench.par.table) <- c("CU", "SMU", "par", "mean", "median", "lwr", "upr", "n_eff", "R_hat")
+
+write.csv(bench.par.table, here("data/generated/bench_par_table.csv"),
           row.names = FALSE)
 
 #remove helpers
