@@ -71,6 +71,10 @@ ggplot(nass_ages, aes(x = Year, fill = as.factor(age))) +
   ylab("") + 
   labs(fill = "Age")
 
+nass_age_length_raw <- nass_ages |>
+  filter(Location == "GW fishwheels",
+         between(age,4,6))
+
 # female length at age ----
 ggplot(nass_age_length_raw, aes(x = Year, y = MEF)) +
   stat_summary(fun = mean, geom = "point", size = 3,col="dark grey") + # Add points for the mean
@@ -111,9 +115,7 @@ SR_age_comps <- nass_ages |>
 write.csv(SR_age_comps, here("data/NassAobs.16Feb2026.csv"),row.names = FALSE)
 
 # reproductive potential multi-panel plot ----
-nass_age_length_raw <- nass_ages |>
-  filter(Location == "GW fishwheels",
-         between(age,4,6))
+
 
 # relationships between NFL and MEF to predict MEF in years with only NFL
 nass_age_length_raw_fem <- nass_age_length_raw |> filter(Sex == "F")
