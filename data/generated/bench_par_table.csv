@@ -1,4 +1,4 @@
-"CU","SMU","par","mean","median","Lwr","Upr","n_eff","R_hat"
+"CU","SMU","par","mean","median","lwr","upr","n_eff","R_hat"
 "Kitsumkalum","Skeena","S.recent",5459.12641,5356.52578,4181.42244,6843.03617,NA,NA
 "Large Lakes","Skeena","S.recent",10241.20358,10069.01369,7991.6629,12730.37842,NA,NA
 "Lower Nass","Nass","S.recent",3553.22252,3484.01453,2761.0182,4421.68619,NA,NA
