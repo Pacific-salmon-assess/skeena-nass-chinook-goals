@@ -46,6 +46,7 @@ ggplot(skeena_ASL, aes(x = Year, y = hypural_length_mm)) +
 kitsumkalum_ASL <- skeena_ASL |>
   filter(CU == "Kitsumkalum", 
          age %in% c(4,5,6), 
+         #age >= 4, 
          Sex != "u") 
   
 kitsumkalum_sex_age_comps <- kitsumkalum_ASL |>
