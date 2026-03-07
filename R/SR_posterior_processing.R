@@ -46,11 +46,10 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
   nRyrs <- filter(yrs, CU==i)$nRyrs
   
   sub_pars <- rstan::extract(AR1.fits[[i]])
-  
+  # latent states
   AR1.spwn <- rbind(AR1.spwn, bind_cols(t(apply(sub_pars$S, 2, quantile, probs = probs_50)),
                                         unique(sub_dat$year),
                                         i))
-  
   AR1.harv <- rbind(AR1.harv, bind_cols(t(apply(sub_pars$H, 2, quantile, probs = probs_50)),
                                         unique(sub_dat$year),
                                         i))

@@ -156,6 +156,20 @@ ggplot(filter(AR1.harv, SMU == "Skeena"), aes(year, H.50/1000)) +
   facet_wrap(~factor(CU, levels = skeena_order), scales = "free_y") +
   theme_sleek() +
   labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
+
+ggplot(filter(sp_har, SMU == "Skeena"), aes(year, harv/(spwn+harv))) +
+  geom_line() +
+  facet_wrap(~factor(CU, levels = skeena_order)) +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest rate")
+
+ggplot(filter(sp_har, SMU == "Skeena", CU != "Skeena Aggregate"), 
+       aes(year, harv/(spwn+harv), color = CU)) +
+  geom_line(alpha = 0.8, lwd = 1.5) +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest rate")
+
 ```
 
 
@@ -467,6 +481,19 @@ ggplot(filter(AR1.harv, SMU == "Nass"), aes(year, H.50/1000)) +
   facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
   theme_sleek() +
   labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
+
+ggplot(filter(sp_har, SMU == "Nass"), aes(year, harv/(spwn+harv))) +
+  geom_line() +
+  facet_wrap(~factor(CU, levels = nass_order)) +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest rate")
+
+ggplot(filter(sp_har, SMU == "Nass", CU != "Nass Aggregate"), 
+       aes(year, harv/(spwn+harv), color = CU)) +
+  geom_line(, alpha= 0.8, lwd = 1.5) +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest rate")
 ```
 
 
