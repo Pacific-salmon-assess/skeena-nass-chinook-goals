@@ -86,7 +86,7 @@ kitsumkalum_repro_potential <- kitsumkalum_sex_age_comps |>
   summarize(eggsperspwn = sum(sex_cor_fecundity),
             eggmassperspwn = sum(sex_cor_egg_mass))
 
-a <- ggplot(kitsumkalum_sex_ratio, aes(x = Year, y= ratio, fill= as.factor(Sex))) +
+a <- ggplot(kitsumkalum_sex_ratio, aes(x = Year, y= ratio/100, fill= as.factor(Sex))) +
   geom_bar(stat = "identity") +
   scale_y_continuous(labels = scales::percent) +
   scale_fill_brewer(palette = "Dark2") +
