@@ -49,7 +49,8 @@ A_obs <- A_obs |>
   # new vars (i.e. combining age groups and calc'ing harvest) all in excel as a placeholder
 
 # age data is aggregate for nass - no CU level data
-nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))
+nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))# |> #THESE are PROPS at age - where's raw? 
+  #mutate(sum = a4+a5+a6)
 
 #make dataset long and add CU names since they are shared among all CUs 
   #hacky fix so it lines up for how skeena code is written

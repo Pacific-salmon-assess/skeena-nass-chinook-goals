@@ -242,8 +242,9 @@ ggplot(filter(TV.resids, SMU == "Skeena"), aes(x=year, y = mid)) +
 bench.posts |>
   filter(SMU == "Skeena", 
          CU != "Skeena Aggregate") |>
-  select(CU, Smsy, Umsy) |>
-  cbind(ln_a = filter(par.posts, SMU == "Skeena", CU != "Skeena Aggregate")$ln_a) |>
+  select(CU, Umsy) |>
+  cbind(ln_a = filter(par.posts, SMU == "Skeena", CU != "Skeena Aggregate")$ln_a, 
+        S_max = filter(par.posts, SMU == "Skeena", CU != "Skeena Aggregate")$S_max) |>
   pivot_longer(-1, names_to = "par") |>
   group_by(CU) |>
   filter(value < quantile(value, 0.90)) |>
@@ -261,16 +262,17 @@ bench.posts |>
 ```
 
 ```{r spawner status}
-bench_plot <- filter(bench.par.table, SMU == "Skeena", 
+bench_plot <- filter(bench.par.table, SMU == "Skeena", CU != "Skeena Aggregate",
                      par %in% c("Sgen", "Smsy.80")) |>
   select(CU, par, median)
 
-ggplot(filter(AR1.spwn, SMU == "Skeena"), aes(year, S.50/1000)) +
+ggplot(filter(AR1.spwn, SMU == "Skeena", CU != "Skeena Aggregate"), aes(year, S.50/1000)) +
   geom_line() +
   geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), fill = "darkgrey", alpha = 0.5) +
   geom_hline(data = bench_plot, 
              aes(yintercept = median/1000, col = par), lty = "dashed") +
-    scale_colour_manual(values=c(Smsy.80 = "forestgreen", 
+  geom_vline(xintercept = max(AR1.spwn$year) - a_max, lwd  = 0.3, lty = 2) +
+  scale_colour_manual(values=c(Smsy.80 = "forestgreen", 
                                  Sgen = "darkred"),
                       labels=c(Smsy.80 = expression(paste("80%", S[MSY])),
                                Sgen = expression(S[Gen]))) +
@@ -335,9 +337,7 @@ b <- ggplot(filter(bench_compare, par %in% c("Smsy.80", "Smsr.40")),
                     labels=c(expression("80%S"["MSY"]), expression("40%S"["MSR"])),
                     aesthetics=c("fill", "colour")) +
   theme(legend.position = c(0.8,0.7),
-        axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
+        axis.text.x = element_text(angle = 45, vjust = 0.5),
         legend.title=element_blank()) +
   labs(x = "Conservation Unit", y = "")
 
@@ -355,7 +355,302 @@ c <- ggplot(filter(bench_compare, par %in% c("Seq", "Smsr")),
         legend.title=element_blank()) +
   labs(x = "Conservation Unit", y = "")
 
-cowplot::plot_grid(a, b, c, labels="auto", ncol=1,rel_heights=c(0.6,0.6,1))
+cowplot::plot_grid(a, b, labels="auto", ncol=1,rel_heights=c(0.6,1))
 ```
 
 # Nass  
+
+## Data   
+```{r sp_har nass}
+ggplot(filter(sp_har_fig, SMU == "Nass"), aes(year, spwn/1000)) +
+  geom_ribbon(aes(xintercept = year, ymin = spwn_LCI/1000, ymax = spwn_UCI/1000), 
+                width = 0, fill = "grey") +
+  geom_line() +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Spawners (000s) and 50th percentile")
+
+ggplot(filter(sp_har_fig, SMU == "Nass"), aes(year, harv/1000)) +
+  geom_ribbon(aes(xintercept = year, ymin = harv_LCI/1000, ymax = harv_UCI/1000), 
+                width = 0, fill = "grey") +
+  geom_line() +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
+```
+
+```{r age props nass}
+prop_age |>
+  pivot_longer(4:6, names_to = "age") |>
+  filter(SMU == "Nass") |>
+  mutate(age = gsub("a", "", age)) |>
+ggplot(aes(year, value, fill = age)) +
+  geom_col(position = position_stack(reverse = TRUE), width = 1) +
+  scale_fill_viridis_d() +
+  facet_wrap(~factor(CU, levels = nass_order)) +
+  theme_sleek() +
+  labs(x = "Return year", y = "Proportion-at-age", fill = "Age")
+```
+
+## Priors  
+
+Here, we look specifically at the $S_{Max}$ prior, as some may consider it "informative".
+This prior is a normal distribution with a mean of half the maximum observed spawners, and a standard deviation of 1.5 times the maximum observed spawners.  
+
+```{r Smax_prior nass}
+S_max_plot_data <- sp_har |>
+  filter(SMU == "Nass") |>
+  group_by(CU) |>
+  summarise(rnorm(nrow(filter(par.posts, SMU == "Nass"))/length(unique(filter(sp_har, SMU == "Nass")$CU)), 
+                  max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
+  cbind(filter(par.posts, SMU == "Nass")$S_max) 
+  
+colnames(S_max_plot_data) <- c("CU", "prior", "posterior")
+
+S_max_plot_data <- S_max_plot_data |>
+  pivot_longer(-CU, names_to = "par")|>
+  filter(value>0) |>
+  group_by(CU) |>
+  filter(value < quantile(value, 0.99))
+
+ggplot(S_max_plot_data, aes(value/1000)) +
+  geom_density(aes(fill = par, color = par), alpha = 0.5) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free") +
+  labs(x = "S_Max (000s)", fill = "", color = "") +
+  theme_sleek()
+
+```
+
+## Spawner-recruit fits 
+
+```{r static fit nass}
+# SR fits ----
+ggplot() +
+  geom_abline(intercept = 0, slope = 1,col="dark grey") +
+  geom_ribbon(data = filter(SR.preds, SMU == "Nass"), 
+              aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
+              fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
+  geom_errorbar(data = filter(brood.all, SMU == "Nass"), 
+                aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
+                colour="grey", width=0, linewidth=0.3) +
+  geom_errorbar(data = filter(brood.all, SMU == "Nass"), 
+                 aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
+                 height=0, colour = "grey", linewidth = 0.3) +
+  geom_point(data = filter(brood.all, SMU == "Nass"),
+             aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
+  geom_line(data = filter(SR.preds, SMU == "Nass"), 
+            aes(x = Spawn/1000, y = Rec_med/1000)) +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free") +
+  scale_colour_viridis_c(name = "Brood Year")+
+  labs(x = "Spawners (000s)", y = "Recruits (000s)") +
+  theme_sleek()
+```
+
+Latent (i.e., hidden) states of spawners and recruits fir in the spawner-recruit model  
+```{r latent states nass}
+ggplot(filter(AR1.spwn, SMU == "Nass"), aes(year, S.50/1000)) +
+  geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), 
+              fill = "grey") +
+  geom_line() +
+  geom_point(data = filter(sp_har, SMU == "Nass"), aes(year, spwn/1000)) +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Spawners (000s) and 50th percentile")
+
+ggplot(filter(AR1.harv, SMU == "Nass"), aes(year, H.50/1000)) +
+  geom_ribbon(aes(ymin = H.25/1000, ymax = H.75/1000), 
+              fill = "grey") +
+  geom_line() +
+  geom_point(data = filter(sp_har, SMU == "Nass"), aes(year, harv/1000)) +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
+  theme_sleek() +
+  labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
+```
+
+
+And a fit with time-varying productivity (Ricker $\alpha$):
+
+```{r tv alpha fit nass}
+a.yrs.all |>
+  filter(SMU == "Nass", 
+         brood_year < max(a.yrs.all$brood_year)-a_max) |> # index fully observed rec
+  ggplot(aes(color=CU)) +
+  geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
+  scale_color_viridis_d() +
+  geom_hline(yintercept = 1, lty=2, col = "grey") +
+  labs(y ="Productivity (\U03B1)", x = "Brood year")+
+  guides(color=guide_legend(title="Stock")) +
+  scale_y_continuous(limits = c(0,5)) +
+  annotate("text", x = 1997, y = 1.2, label = "replacement", color = "grey") +
+  theme_sleek() +
+  theme(legend.position = "bottom") 
+  
+a.yrs.all |>
+  filter(SMU == "Nass", 
+         brood_year < max(a.yrs.all$brood_year)-a_max) |> # index fully observed rec
+  ggplot() +
+  geom_ribbon(aes(x = brood_year, ymin = lwr, ymax = upr), fill = "grey") +
+  geom_line(aes(x = brood_year , y = mid)) +
+  geom_hline(yintercept = 1, lty=2, col = "grey") +
+  labs(y ="Productivity (\U03B1) and 80th percentile", x = "Brood year")+
+  facet_wrap(~factor(CU, levels = nass_order)) +
+  scale_y_continuous(limits = c(0,8)) +
+  theme_sleek() +
+  theme(legend.position = "bottom") 
+
+ggplot() +
+  geom_point(data = filter(brood.all, SMU == "Nass"),
+             aes(x = S_med/1000,
+                 y = R_med/1000),
+             size = 1.5) +
+  geom_line(data = filter(TV.SR.preds, SMU == "Nass"), aes(x = spw/1000, y = pred.R/1000, color = year, group = year)) +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free") +
+  scale_colour_viridis_c(name = "Brood Year")+
+  geom_abline(intercept = 0, slope = 1,col="dark grey") +
+  labs(x = "Spawners (000s)",
+       y = "Recruits (000s)",
+       title = "Time varying productivity spawner-recruit fits") +
+  theme_sleek()
+```
+
+We also check residuals from both models:
+
+```{r residuals nass}
+# AR1 resids ----
+ggplot(filter(AR1.resids, SMU == "Nass"), aes(x=year, y = mid)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "darkgrey", alpha = 0.5) +
+  geom_ribbon(aes(ymin = midlwr, ymax = midupr),  fill = "black", alpha=0.2) +
+  geom_line(lwd = 1.1) +
+  coord_cartesian(ylim=c(-2,2)) +
+  labs(x = "Return year",
+       y = "Recruitment residuals",
+       title = "AR1 recruitment residuals") +
+  facet_wrap(~factor(CU, levels = nass_order)) +
+  theme(legend.position = "none",
+        panel.grid = element_blank()) +
+  theme_sleek() +
+  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
+
+
+# TV resids ----
+ggplot(filter(TV.resids, SMU == "Nass"), aes(x=year, y = mid)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr),  fill = "darkgrey", alpha = 0.5) +
+  geom_ribbon(aes(ymin = midlwr, ymax = midupr),  fill = "black", alpha=0.2) +
+  geom_line(lwd = 1.1) +
+  labs(x = "Return year",
+       y = "Recruitment residuals",
+       title = "Time-varying recruitment residuals") +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
+  theme(legend.position = "none",
+        panel.grid = element_blank()) +
+  theme_sleek() +
+  geom_abline(intercept = 0, slope = 0, col = "dark grey", lty = 2)
+```
+
+```{r benchmarks nass}
+bench.posts |>
+  filter(SMU == "Nass", 
+         CU != "Nass Aggregate") |>
+  select(CU, Umsy) |>
+  cbind(ln_a = filter(par.posts, SMU == "Nass", CU != "Nass Aggregate")$ln_a, 
+        S_max = filter(par.posts, SMU == "Nass", CU != "Nass Aggregate")$S_max) |>
+  pivot_longer(-1, names_to = "par") |>
+  group_by(CU) |>
+  filter(value < quantile(value, 0.90)) |>
+  ggplot(aes(value, fill = CU, color = CU)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~par, nrow = 3, scales = "free", strip.position = "bottom") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(), 
+        strip.background = element_blank(),
+        strip.placement = "outside") +
+  labs(x = "", y = "")
+```
+
+```{r spawner status nass}
+bench_plot <- filter(bench.par.table, SMU == "Nass", CU != "Nass Aggregate", 
+                     par %in% c("Sgen", "Smsy.80")) |>
+  select(CU, par, median)
+
+ggplot(filter(AR1.spwn, SMU == "Nass", CU!= "Nass Aggregate"), aes(year, S.50/1000)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), fill = "darkgrey", alpha = 0.5) +
+  geom_hline(data = bench_plot, 
+             aes(yintercept = median/1000, col = par), lty = "dashed") +
+  geom_vline(xintercept = max(AR1.spwn$year)- a_max, lwd = 0.5, lty = 2) +
+    scale_colour_manual(values=c(Smsy.80 = "forestgreen", 
+                                 Sgen = "darkred"),
+                      labels=c(Smsy.80 = expression(paste("80%", S[MSY])),
+                               Sgen = expression(S[Gen]))) +
+  facet_wrap(~factor(CU, levels = nass_order), nrow = 3, scales = "free_y") +
+  theme_sleek() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Retun Year", y = "Spawners (000s)", col = "")
+```
+
+```{r bench-posts nass}
+bench.long <- select(bench.posts, CU, SMU, Sgen, Smsy.80, S.recent) |>
+  pivot_longer(cols = c(Sgen, Smsy.80, S.recent),
+                           names_to = "par") |>  
+  arrange(CU, par, value) |>
+  group_by(CU, par) |>
+  filter(between(value, quantile(value, 0.05), quantile(value, 0.95)), 
+         SMU == "Nass") 
+
+ggplot(bench.long, aes(value/1000, fill = par, color = par)) +
+  geom_density(alpha = 0.3) +
+  geom_vline(xintercept = 1.5, lty=2, col="grey") +
+  facet_wrap(~factor(CU, levels = nass_order), scales = "free") +
+  scale_fill_manual(breaks = c("S.recent", "Sgen", "Smsy.80"),
+                    values = c("black", "darkred", "forestgreen"),
+                    aesthetics = c("fill", "color"),
+                    labels = c(expression(italic(S[recent])), 
+                               expression(italic(S[Gen])),
+                               expression(italic(paste("80% ",S)[MSY])))) +
+  labs(x = "Spawners (000s)", y = "Posterior density", fill = "", color = "") +
+  theme_sleek()
+```
+
+```{r bench compare nass, width=700*2, height=900*2, dpi=240}
+bench_compare <- bench.par.table |>
+  filter(par %in% c("Sgen", "Smsr.20", "Smsy.80", "Smsr.40", "Seq", "Smsr"), 
+         SMU == "Nass", 
+         CU != "Nass Aggregate")
+
+a <- ggplot(filter(bench_compare, par %in% c("Sgen", "Smsr.20")), 
+            aes(x = CU, y = median/1000, fill = par)) +
+  geom_bar(position="dodge", stat = "identity") +
+  geom_errorbar(aes(ymin = lwr/1000, ymax = upr/1000 ,col = par), 
+                width = 0,position=position_dodge(0.9)) +
+  theme_sleek() +
+  scale_fill_manual(values = scales::hue_pal()(2),
+                    labels=c(expression("S"["Gen"]), expression("20%S"["MSR"])),
+                    aesthetics=c("fill", "colour")) +
+  theme(legend.position = c(0.81,0.7),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.title=element_blank()) +
+  labs(x = "Conservation Unit", y = "")
+
+b <- ggplot(filter(bench_compare, par %in% c("Smsy.80", "Smsr.40")), 
+            aes(x = CU, y = median/1000, fill = par)) +
+  geom_bar(position="dodge", stat = "identity") +
+  geom_errorbar(aes(ymin = lwr/1000, ymax = upr/1000, col = par), 
+                width = 0, position = position_dodge(0.9)) +
+  theme_sleek()  +
+  scale_fill_manual(values = scales::hue_pal()(2),
+                    labels=c(expression("80%S"["MSY"]), expression("40%S"["MSR"])),
+                    aesthetics=c("fill", "colour")) +
+  theme(legend.position = c(0.81,0.7),
+        axis.text.x = element_text(angle = 45, vjust = 0.5),
+        legend.title=element_blank()) +
+  labs(x = "Conservation Unit", y = "")
+
+cowplot::plot_grid(a, b, labels = "auto", ncol = 1, rel_heights = c(0.6,1))
+```
