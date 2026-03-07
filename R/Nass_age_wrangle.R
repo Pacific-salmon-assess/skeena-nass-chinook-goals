@@ -112,7 +112,8 @@ SR_age_comps <- nass_ages |>
   rename(a4 = '4', 
          a5 = '5', 
          a6 = '6')
-write.csv(SR_age_comps, here("data/NassAobs.16Feb2026.csv"),row.names = FALSE)
+
+write.csv(SR_age_comps, here("data/Nass_Aobs_16Feb2026.csv"),row.names = FALSE)
 
 # reproductive potential multi-panel plot ----
 
