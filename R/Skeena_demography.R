@@ -1,6 +1,7 @@
 library(here)
 library(tidyverse)
 library(viridis)
+library(ggpubr)
 
 source(here("R/data_functions.R"))
 
@@ -95,13 +96,13 @@ a <- ggplot(kitsumkalum_sex_ratio, aes(x = Year, y= ratio/100, fill= as.factor(S
   labs(fill = "Sex") +
   theme(legend.position = "top")
 
-b <- ggplot(kitsumkalum_ASL |> filter(Sex == "f"), aes(x = Year, y = hypural_length_mm)) +
+b <- ggplot(kitsumkalum_ASL_infill |> filter(Sex == "f"), aes(x = Year, y = MEF)) +
   stat_summary(fun = mean, geom = "point", size = 2, col="dark grey") + # Add points for the mean
   stat_summary(fun.data = mean_cl_boot, # Calculate mean and standard error
                geom = "errorbar",
                width = 0, # Control the width of the error bar whiskers
                col="dark grey") +
-  labs(x = "Year", y = "Female length (hypural; mm)") +
+  labs(x = "Year", y = "Female length (MEF; mm)") +
   scale_x_continuous(n.breaks = 3) +
   facet_wrap(~age) +
   geom_smooth(method = "lm", level = 0.99, color = "dark grey", fill = "lightblue") +

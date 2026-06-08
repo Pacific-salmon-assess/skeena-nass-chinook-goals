@@ -1,6 +1,7 @@
 # script for wrangling raw age data from LGL 
 library(tidyverse)
 library(here)
+library(ggpubr)
 source(here("R/data_functions.R"))
 
 # read in and wrangle data ----
@@ -207,3 +208,83 @@ g <- ggarrange(a,b,c,d,
 g
 my.ggsave(here("plots/Nass/repro-potential.PNG"))
 
+# Kincolith reproductive potential
+nass_age_length_raw <- nass_ages |>
+  filter(Location == "Ksi Gingolx (Kincolith R)",
+         between(age,4,6))
+
+King_sex_age_comps <- nass_age_length_raw |>
+  filter(Location == "Ksi Gingolx (Kincolith R)",
+         between(age,4,6)) |>
+  count(Year, Sex, age) |>
+  group_by(Year) |>
+  mutate(year_total = sum(n),
+         prop_count = (n/year_total)*100) |>
+  select(Year, age, Sex, prop_count)
+
+King_sex_ratio <- King_sex_age_comps |>
+  group_by(Year, Sex) |>
+  summarize(ratio = sum(prop_count))
+
+King_age_length_raw <- nass_ages |>
+  filter(Location == "Ksi Gingolx (Kincolith R)",
+         between(age,4,6))
+
+King_repro_potential <- King_sex_age_comps |>
+  filter(Sex == "F") |>
+  left_join(nas_fem_avg_len, by=c("Year", "age")) |>
+  mutate(sex_cor_fecundity = (prop_count/100)*fecundity, 
+         sex_cor_egg_mass = (prop_count/100)*egg_mass) |>
+  group_by(Year) |>
+  summarize(eggsperspwn = sum(sex_cor_fecundity),
+            eggmassperspwn = sum(sex_cor_egg_mass))
+
+
+a <- ggplot(King_sex_ratio, aes(x = Year, y= ratio/100, fill= as.factor(Sex))) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_sleek() +
+  ylab("Spawners of given sex") + 
+  labs(fill = "Sex") +
+  theme(legend.position = "top")
+
+b <- ggplot(nass_age_length_infill |> filter(Sex == "F"), aes(x = Year, y = MEF)) +
+  stat_summary(fun = mean, geom = "point", size = 2, col="dark grey") + # Add points for the mean
+  stat_summary(
+    fun.data = mean_cl_boot, # Calculate mean and standard error
+    geom = "errorbar",
+    width = 0, # Control the width of the error bar whiskers
+    col="dark grey"
+  ) +
+  labs(x = "Year", y = "Female length (MEF)")  +
+  facet_wrap(~age) +
+  geom_smooth(method = "lm", level = 0.99, color = "dark grey", fill = "lightblue") +
+  theme_sleek()+
+  theme(plot.margin = margin(20,10,0.5,10))
+
+c <- ggplot(nass_ages |> filter(Location == "GW fishwheels", between(age,4,6), Sex == "F"), aes(x = Year, fill = as.factor(age))) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_sleek() +
+  ylab("Female age composition") + 
+  labs(fill = "Age") +
+  theme(legend.position = "top")
+
+d <- ggplot(King_repro_potential, aes(x = Year, y = eggsperspwn)) +
+  geom_smooth(method="lm", color="grey", fill = "lightblue") +
+  geom_point(size=2, color="dark grey")+
+  xlab("Year") +
+  ylab("Average reproductive output \n (total eggs per spawner)") +
+  theme_sleek() +
+  theme(plot.margin = margin(40,10,0.5,0.5))
+
+
+g <- ggarrange(a,b,c,d,
+               labels = c("a", "b","c", "d"),
+               heights = c(1,1))
+
+
+g
+my.ggsave(here("plots/Nass/repro-potential.PNG"))

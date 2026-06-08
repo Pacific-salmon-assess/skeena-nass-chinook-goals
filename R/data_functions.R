@@ -54,33 +54,32 @@ nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))# |> #THESE are PROP
 
 #make dataset long and add CU names since they are shared among all CUs 
   #hacky fix so it lines up for how skeena code is written
-nass_A_obs <- bind_rows(nass_A_obs, nass_A_obs, nass_A_obs, nass_A_obs) |> 
+nass_A_obs <- bind_rows(nass_A_obs, nass_A_obs, nass_A_obs) |> 
   mutate(CU = c(rep("Upper Nass", nrow(nass_A_obs)), 
-                rep("Middle Nass", nrow(nass_A_obs)), 
                 rep("Lower Nass", nrow(nass_A_obs)), 
                 rep("Nass Aggregate", nrow(nass_A_obs))), 
          SMU = "Nass") |>
   rename(year = Year)
 
-nass_sp_har <- read.csv(here("data/Nass_SpHar_16Feb2026.csv"))
+nass_sp_har <- read.csv(here("data/Nass_SpHar_3June2026.csv"))
 
 #check years so we know to put only fully observed in aggregate
-nass_sp_har |>
-  group_by(CU) |>
-  summarise(min(year), 
-            max(year))
+#nass_sp_har |>
+#  group_by(CU) |>
+#  summarise(min(year), 
+#            max(year))
 
-nass_sp_har_agg <- nass_sp_har |>
-  filter(year >= 1994) |> #based on above
+#nass_sp_har_agg <- nass_sp_har |>
+#  filter(year >= 1994) |> #based on above
   ##ASSUMPTION TO ADDRESS BELOW - infill NAs, then take mean?
-  mutate(spwn_cv = ifelse(is.na(spwn_cv), 0.5, spwn_cv)) |>  #0.5: upper end of empirical CVs
-  group_by(SMU, year) |>
-  summarise(spwn = sum(spwn), 
-            harv = sum(harv), 
-            spwn_cv = mean(spwn_cv)) |>
-  mutate(CU = "Nass Aggregate")
+#  mutate(spwn_cv = ifelse(is.na(spwn_cv), 0.5, spwn_cv)) |>  #0.5: upper end of empirical CVs
+#  group_by(SMU, year) |>
+#  summarise(spwn = sum(spwn), 
+#            harv = sum(harv), 
+#            spwn_cv = mean(spwn_cv)) |>
+#  mutate(CU = "Nass Aggregate")
 
-nass_sp_har <- bind_rows(nass_sp_har, nass_sp_har_agg)
+#nass_sp_har <- bind_rows(nass_sp_har, nass_sp_har_agg)
 
 #bind skeena and nass
 prop_age <- bind_rows(A_obs, nass_A_obs) |> #for plotting later
@@ -142,7 +141,7 @@ yrs <- sp_har |>
   summarise(nyrs = max(year)-min(year)+1, 
             nRyrs = nyrs + A - 1) ## want to be certain this is A not a_min
 
-rm(A_obs, a_obs, nass_A_obs, nass_sp_har, nass_sp_har_agg, i)
+rm(A_obs, a_obs, nass_A_obs, nass_sp_har, i)
 
 
 # functions ------------------------------------------------------------------------------

@@ -614,8 +614,9 @@ ggplot(filter(AR1.spwn, SMU == "Nass", CU!= "Nass Aggregate"), aes(year, S.50/10
                                  Sgen = "darkred"),
                       labels=c(Smsy.80 = expression(paste("80%", S[MSY])),
                                Sgen = expression(S[Gen]))) +
-  facet_wrap(~factor(CU, levels = nass_order), nrow = 3, scales = "free_y") +
+  facet_wrap(~factor(CU, levels = nass_order), nrow = 2, scales = "free_y") +
   theme_sleek() +
+  coord_cartesian(ylim = c(0,NA)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Retun Year", y = "Spawners (000s)", col = "")
 ```

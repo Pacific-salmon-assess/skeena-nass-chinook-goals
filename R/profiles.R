@@ -108,6 +108,9 @@ my.ggsave(here("plots/Skeena/Kitsum-profiles.PNG"))
 
 # Nass aggregate profiles ----
 Nass_agg <- sp_har |> filter(CU == "Nass Aggregate")
+bench_smsy <- read.csv(here("data/generated/bench_par_table.csv")) |>
+  filter(CU == "Nass Aggregate",
+         par == "Smsy")
 
 pars <- rstan::extract(AR1.fits[["Nass Aggregate"]])
 max_samples <- dim(pars$lnalpha)
@@ -198,8 +201,30 @@ g <- ggarrange(a,b,nrow =2, labels = c("a", "b"), heights = c(0.75,0.9))
 print(g)
 my.ggsave(here("plots/Nass/Nass-profiles.PNG"))
 
+ggplot(long_yield_profiles, aes(x = Spawners, y = perc, group = Metric, color = Metric)) +
+  geom_rect(aes(xmin=bench_smsy$lwr, xmax=bench_smsy$upr, ymin=-Inf, ymax=Inf), fill="light grey", alpha=0.02, lty=2) +
+  geom_vline(xintercept = bench_smsy$median) +
+  geom_line(size = 1.5) +
+  scale_color_viridis(discrete = TRUE) +
+  ylab("Probability") +
+  theme(legend.position = "none") +
+  theme_sleek() +
+  theme(legend.title = element_blank()) + 
+  geom_rug(data = Nass_agg,
+           aes(x = spwn),
+           inherit.aes = FALSE,
+           sides="b")
+my.ggsave(here("plots/Nass/Nass-yield-profiles.PNG"), height=4)
+
 # Skeena aggregate profiles ----
 Skeena_agg <- sp_har |> filter(CU == "Skeena Aggregate")
+bench_smsy <- read.csv(here("data/generated/bench_par_table.csv")) |>
+  filter(CU == "Skeena Aggregate",
+         par == "Smsy")
+
+bench_smsr <- read.csv(here("data/generated/bench_par_table.csv")) |>
+  filter(CU == "Skeena Aggregate",
+         par == "Smsr")
 
 pars <- rstan::extract(AR1.fits[["Skeena Aggregate"]])
 max_samples <- dim(pars$lnalpha)
@@ -257,6 +282,8 @@ long_yield_profiles <- profiles_median%>%
   pivot_longer(!Spawners, names_to = "Metric", values_to = "perc")
 
 a <- ggplot(long_yield_profiles, aes(x = Spawners, y = perc, group = Metric, color = Metric)) +
+  geom_rect(aes(xmin=bench_smsy$lwr, xmax=bench_smsy$upr, ymin=-Inf, ymax=Inf), fill="light grey", alpha=0.02, lty=2) +
+  geom_vline(xintercept = bench_smsy$median) +
   geom_line(size = 1.5) +
   scale_color_viridis(discrete = TRUE) +
   ylab("Probability") +
@@ -289,3 +316,18 @@ b <- ggplot(long_rec_profiles, aes(x = Spawners, y = perc, group = Metric, color
 g <- ggarrange(a,b,nrow =2, labels = c("a", "b"), heights = c(0.75,0.9))
 print(g)
 my.ggsave(here("plots/Skeena/Skeena-profiles.PNG"))
+
+ggplot(long_yield_profiles, aes(x = Spawners, y = perc, group = Metric, color = Metric)) +
+  geom_rect(aes(xmin=bench_smsy$lwr, xmax=bench_smsy$upr, ymin=-Inf, ymax=Inf), fill="light grey", alpha=0.02, lty=2) +
+  geom_vline(xintercept = bench_smsy$median) +
+  geom_line(size = 1.5) +
+  scale_color_viridis(discrete = TRUE) +
+  ylab("Probability") +
+  theme(legend.position = "none") +
+  theme_sleek() +
+  theme(legend.title = element_blank()) + 
+  geom_rug(data = Skeena_agg,
+           aes(x = spwn),
+           inherit.aes = FALSE,
+           sides="b")
+my.ggsave(here("plots/Skeena/Skeena-yield-profiles.PNG"), height=4)
