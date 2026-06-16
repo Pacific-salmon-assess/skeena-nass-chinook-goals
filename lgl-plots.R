@@ -5,7 +5,7 @@ nass_order <- c("Lower Nass", "Upper Nass", "Nass Aggregate")
 nass_order_spw <- c("Lower Nass", "Tseax","Upper Nass", "Nass Aggregate")
 all_order <- c("Lower Nass", "Upper Nass","Lower Skeena", "Kitsumkalum", "Zymoetz", "Middle Skeena", "Large Lakes", 
                "Upper Skeena")
-skeena_order
+#skeena_order
 tseax<-read.csv("data/Tseax-esc.csv") |>
   rename(spwn = `X50.`,
          spwn_LCI = `X5.`,
@@ -149,7 +149,8 @@ data <- a.yrs.all |>
   
 # time varying productivity for all CUs ----  
   a.yrs.all |>
-    filter(brood_year < max(a.yrs.all$brood_year)-a_max) |> # index fully observed rec
+    filter(brood_year < max(a.yrs.all$brood_year)-a_max, # index fully observed rec
+           !(CU %in% c("Skeena Aggregate", "Nass Aggregate"))) |> 
     ggplot(aes(color=CU)) +
     geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
     scale_color_viridis_d() +
