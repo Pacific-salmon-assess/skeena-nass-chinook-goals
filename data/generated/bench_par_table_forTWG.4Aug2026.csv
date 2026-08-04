@@ -1,0 +1,61 @@
+CU,SMU,par,median,lwr,upr
+Lower Nass,Nass,alpha,2.22,1.46,4.41
+Lower Nass,Nass,Seq,8556,3437,34735
+Lower Nass,Nass,Sgen,2061,587,7632
+Lower Nass,Nass,Smsr,12766,3485,46397
+Lower Nass,Nass,Smsy,3793,1489,15170
+Lower Nass,Nass,Umsy,0.36,0.18,0.59
+Nass Aggregate,Nass,alpha,2.53,1.90,3.84
+Nass Aggregate,Nass,Seq,35665,27614,53553
+Nass Aggregate,Nass,Sgen,7548,3631,14771
+Nass Aggregate,Nass,Smsr,38860,21366,79674
+Nass Aggregate,Nass,Smsy,15590,11404,24152
+Nass Aggregate,Nass,Umsy,0.41,0.29,0.55
+Upper Nass,Nass,alpha,2.39,1.88,3.58
+Upper Nass,Nass,Seq,29576,22318,44617
+Upper Nass,Nass,Sgen,6685,3164,12641
+Upper Nass,Nass,Smsr,34247,18100,68629
+Upper Nass,Nass,Smsy,13032,9328,20300
+Upper Nass,Nass,Umsy,0.39,0.29,0.53
+Kitsumkalum,Skeena,alpha,2.57,1.79,4.58
+Kitsumkalum,Skeena,Seq,15599,11903,23914
+Kitsumkalum,Skeena,Sgen,3219,1295,6888
+Kitsumkalum,Skeena,Smsr,16690,8381,38787
+Kitsumkalum,Skeena,Smsy,6789,4847,10877
+Kitsumkalum,Skeena,Umsy,0.41,0.27,0.60
+Large Lakes,Skeena,alpha,2.56,2.01,3.73
+Large Lakes,Skeena,Seq,61186,41493,105454
+Large Lakes,Skeena,Sgen,12842,5812,26649
+Large Lakes,Skeena,Smsr,66338,33428,140014
+Large Lakes,Skeena,Smsy,26703,17267,47135
+Large Lakes,Skeena,Umsy,0.41,0.32,0.54
+Lower Skeena,Skeena,alpha,1.96,1.56,2.76
+Lower Skeena,Skeena,Seq,7042,4660,11976
+Lower Skeena,Skeena,Sgen,1992,1000,3637
+Lower Skeena,Skeena,Smsr,11034,5241,21747
+Lower Skeena,Skeena,Smsy,3199,2049,5489
+Lower Skeena,Skeena,Umsy,0.31,0.21,0.44
+Middle Skeena,Skeena,alpha,2.68,2.05,3.96
+Middle Skeena,Skeena,Seq,25768,17318,44932
+Middle Skeena,Skeena,Sgen,5092,2294,10791
+Middle Skeena,Skeena,Smsr,26617,13517,56642
+Middle Skeena,Skeena,Smsy,11154,7195,19938
+Middle Skeena,Skeena,Umsy,0.43,0.33,0.56
+Skeena Aggregate,Skeena,alpha,2.40,1.93,3.44
+Skeena Aggregate,Skeena,Seq,142071,93816,229416
+Skeena Aggregate,Skeena,Sgen,31926,14511,60021
+Skeena Aggregate,Skeena,Smsr,164724,80960,318636
+Skeena Aggregate,Skeena,Smsy,62654,39421,103374
+Skeena Aggregate,Skeena,Umsy,0.39,0.30,0.51
+Upper Skeena,Skeena,alpha,3.02,1.94,5.32
+Upper Skeena,Skeena,Seq,11775,6570,29338
+Upper Skeena,Skeena,Sgen,2018,692,6106
+Upper Skeena,Skeena,Smsr,11125,4765,33932
+Upper Skeena,Skeena,Smsy,4945,2645,12785
+Upper Skeena,Skeena,Umsy,0.47,0.30,0.64
+Zymoetz,Skeena,alpha,2.03,1.53,2.90
+Zymoetz,Skeena,Seq,4980,3193,8983
+Zymoetz,Skeena,Sgen,1326,673,2711
+Zymoetz,Skeena,Smsr,7329,3616,16437
+Zymoetz,Skeena,Smsy,2238,1413,4126
+Zymoetz,Skeena,Umsy,0.32,0.20,0.46

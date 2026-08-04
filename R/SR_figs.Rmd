@@ -34,7 +34,7 @@ knitr::opts_chunk$set(echo = FALSE,warning = FALSE, message = FALSE,
 source(here("R/SR_posterior_processing.R")) #can take some time
 skeena_order <- c("Lower Skeena", "Kitsumkalum", "Zymoetz", "Middle Skeena", "Large Lakes", 
                   "Upper Skeena", "Skeena Aggregate")
-nass_order <- c("Lower Nass", "Middle Nass", "Upper Nass", "Nass Aggregate")
+nass_order <- c("Lower Nass", "Upper Nass", "Nass Aggregate")
 ```
 
 State-space spawner-recruit models were fit [here](https://github.com/Pacific-salmon-assess/skeena-nass-chinook-goals/blob/main/R/SRR_fit.R), and model validation can be found [here](https://github.com/Pacific-salmon-assess/skeena-nass-chinook-goals/blob/main/R/SR_diagnostics.Rmd). Below we explore the output from these models. 
