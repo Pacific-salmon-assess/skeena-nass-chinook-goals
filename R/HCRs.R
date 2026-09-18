@@ -1,4 +1,4 @@
-# visualize relized HCR for Skeena aggregate over time
+# visualize realized HCR for Skeena aggregate over time
 
 library(tidyverse)
 library(here)
@@ -18,6 +18,7 @@ ggplot(data = agg_RR, aes(x = Run, y = ER, col = year)) +
   coord_cartesian(ylim=c(0,1), xlim=c(0,250000)) +
   theme_sleek()
 
+ggsave("plots/Skeena/realized-HCR.jpeg", width = 6, height=4,units="in", dpi=600)
 
 agg_Umsy <- benchmarks |>
   filter(CU == "Skeena Aggregate",
