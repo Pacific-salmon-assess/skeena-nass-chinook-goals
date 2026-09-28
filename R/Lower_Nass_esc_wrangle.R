@@ -18,7 +18,7 @@ lower_nass_esc <-coast_nass_esc |>
 
 df <- read.csv(here("data/nass_coastal_esc.csv"))
 
-lower_nass <- matrix(NA,34,1000)
+lower_nass <- matrix(NA,35,1000)
 
 for(i in 1:1000){
   Iknouk_cont = rbeta(1,0.9324756, 7.7788844)
@@ -74,7 +74,7 @@ lower_nass[,i] <- as.vector(df2$lower_esc)
 nass_sp_har <- read.csv(here("data/Nass_SpHar_16Feb2026.csv"))
 lower_escapement_error <- t(apply(lower_nass,1,quantile, probs=(c(0.5,0.05,0.95))))
 lower_escapement_origonal <- nass_sp_har |> filter(CU == "Lower Nass") |> select(spwn, year)
-lower_escapement <- cbind(lower_escapement_error, lower_escapement_origonal)
+lower_escapement <- cbind(lower_escapement_error, rbind(lower_escapement_origonal,c(NA,2026)))
 
 ggplot(lower_escapement, aes(x = year, y = `50%`)) +
   geom_ribbon(aes(ymin = `5%`, ymax = `95%`), fill = "light grey") +
@@ -85,6 +85,23 @@ ggplot(lower_escapement, aes(x = year, y = `50%`)) +
   theme_sleek()
 ggsave("plots/nass/lowerCU-reconstruction.jpeg",width=7,height=5)
 
+
+ggplot(lower_escapement, aes(x = year, y = `50%`)) +
+  annotate(geom = "rect", xmin = 1996.5, xmax = 1997.5, ymin = -Inf, ymax = Inf,
+           fill = "lightblue", alpha = 0.5) +
+  annotate(geom = "rect", xmin = 2002.5, xmax = 2022.5, ymin = -Inf, ymax = Inf,
+           fill = "lightblue", alpha = 0.5) +
+  geom_ribbon(aes(ymin = `5%`, ymax = `95%`), fill = "light grey") +
+  geom_line(size=1.5, color="grey30")+
+  xlab("Year") +
+  ylab("Lower Nass reconstructed spawner abundance") +
+  theme_sleek()
+ggsave("plots/nass/lowerCU-reconstruction-infill.jpeg",width=7,height=5)
+
+
+
+  
+  
 Iknouk_cont = rbeta(10000,0.9324756, 7.7788844)
 a <- ggplot(data.frame(x = Iknouk_cont), aes(x = Iknouk_cont)) +
   geom_density(fill = "dark grey", size = 0.5) +
