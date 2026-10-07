@@ -9,7 +9,8 @@ library(skrunchy2025)
 # read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO)'s package
   #and Nass data from Ian Beveridge & Richard Alexander (LGL)
 
-sp_har <- skrunchy2025::run_reconstruction_table |>
+sp_har <- skrunchy2025::run_reconstruction_table |> ## get new name from Luke
+  ##select CVs 
   select(i_population, y_return_year, W_star_wild_spawners, total_harvest_estimate) |>
   rename(CU = i_population, 
          year = y_return_year) |>
@@ -29,6 +30,8 @@ for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
   A_obs <- bind_rows(A_obs, a_obs)
 }
  
+
+## do I want to do RAW a_obs?
 A_obs <- A_obs |>
   mutate(`6` = `6` +`7`) |>
   rename(a4 = `4`, 
@@ -139,7 +142,7 @@ A <- a_max - a_min + 1 #total age classes
 yrs <- sp_har |>
   group_by(CU) |>
   summarise(nyrs = max(year)-min(year)+1, 
-            nRyrs = nyrs + A - 1) ## want to be certain this is A not a_min
+            nRyrs = nyrs + A - 1)
 
 rm(A_obs, a_obs, nass_A_obs, nass_sp_har, i)
 
