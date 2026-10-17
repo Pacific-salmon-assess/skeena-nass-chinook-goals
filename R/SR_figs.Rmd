@@ -1,7 +1,7 @@
 ---
 title: "Skeena and Nass Chinook Salmon Spawner-recruit Analysis"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
-author: ""
+author: "D. Glaser, B. Connors"
 output:
   html_document: 
     fig_caption: true
@@ -682,3 +682,8 @@ b <- ggplot(filter(bench_compare, par %in% c("Smsy.80", "Smsr.40")),
 
 cowplot::plot_grid(a, b, labels = "auto", ncol = 1, rel_heights = c(0.6,1))
 ```
+
+# IWAM compare  
+
+Here we compare the above AR1 model to the same model fit with an informative $S_{Max}$ prior based on an estimate Integrated Watershed Area Model (IWAM) developed by *people...* and adapted to this system by Mairin.  
+

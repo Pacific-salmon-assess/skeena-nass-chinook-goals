@@ -166,6 +166,9 @@ IWAM_priors <- filter(IWAM, CU %in% c(#"Kalum-Early Timing", #"Kalum-Late Timing
 
 IWAM_priors$CU <- c("Lower Skeena", "Large Lakes", "Middle Skeena", "Lower Nass", 
                     "Upper Nass", "Upper Skeena", "Zymoetz") #rename to match sp_har
+
+IWAM_priors <- arrange(IWAM_priors, CU)
+
 rm(A_obs, a_obs, nass_A_obs, nass_sp_har, i, run_reconstruction_table_summary_with_uncertainty)
 
 

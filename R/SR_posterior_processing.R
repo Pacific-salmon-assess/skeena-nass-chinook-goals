@@ -14,6 +14,10 @@ TVA.fits <- lapply(list.files(here("data/generated/model_fits/TVA"),
                               full.names = T), readRDS)
 names(TVA.fits) <- unique(sp_har$CU)
 
+IWAM.fits <- lapply(list.files(here("data/generated/model_fits/IWAM"),
+                               full.names = T), readRDS)
+names(IWAM.fits) <- IWAM_priors$CU
+
 # process data and fits to make plots later ----------------------------------------------
 bench.par.table <- NULL #empty objects to rbind CU's outputs to
 bench.posts <- NULL
