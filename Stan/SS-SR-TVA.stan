@@ -10,13 +10,15 @@ data{
   vector[nyrs] H_obs; // observed harvest
   vector[nyrs] S_cv;  // spawner observation error CV
   vector[nyrs] H_cv;  // harvest observation error CV
+  real prior_S_max;   // mean on prior for Smax
 }
+
 parameters{
   real<lower=0,upper=1> F_rw; //fraction of variance attributed to random walk in alpha
   real<lower=0> sigma_tot;
   real ln_alpha0;                         // initial productivity (on log scale)
   vector[nyrs] alpha_dev;                // time varying year-to-year deviations in a
-  real<lower=0> beta;                     // Ricker b
+  real<lower=0> S_max;                     // Ricker b
   vector<lower=0>[nRyrs] lnR;             // log recruitment states
   real<lower=0> sigma_R0;                 // process error for first a.max years with no spawner link
   real lnresid_0;                         // first residual for lag-1 correlation in process error
@@ -26,6 +28,7 @@ parameters{
   real<lower=0,upper=1> D_scale;          // governs variability of age proportion vectors across cohorts
   matrix<lower=0.01>[nRyrs, A] g;         // individual year/age class gamma variates for generating age at maturity proportions
 }
+
 transformed parameters{
   vector<lower=0>[nyrs] N;              // run size states
   vector<lower=0>[nyrs] S;              // spawner states
@@ -41,9 +44,10 @@ transformed parameters{
   real<lower=0> D_sum;                  // inverse of D_scale which governs variability of age proportion vectors across cohorts
   vector<lower=0>[A] Dir_alpha;         // Dirichlet shape parameter for gamma distribution used to generate vector of age-at-maturity proportions
   matrix<lower=0, upper=1>[nyrs, A] q;  // age composition by year/age classr matrix
-  vector[nyrs] ln_alpha;               // ln_alpha in each year
-  real<lower=0> sigma_alpha;              // amount alpha can deviate
-  real<lower=0> sigma_R;                  // process error
+  vector[nyrs] ln_alpha;                // ln_alpha in each year
+  real<lower=0> sigma_alpha;            // amount alpha can deviate
+  real<lower=0> sigma_R;                // process error
+  real beta;                            // ricker beta
 
   // Maturity schedule: use a common maturation schedule to draw the brood year specific schedules
   pi[1] = prob[1];
@@ -62,6 +66,7 @@ transformed parameters{
   sigma_R = (1-F_rw)*sigma_tot; //obs variance - remaining fraction of total variance
   
   R = exp(lnR);
+  beta = 1/S_max;
   // Calculate the numbers at age matrix as brood year recruits at age (proportion that matured that year)
   for (t in 1:nyrs) {
     for(a in 1:A){
@@ -95,7 +100,7 @@ transformed parameters{
     lnresid[i] = 0.0;
     lnRm_1[i] = 0.0;
   }
-  for(y in (A+a_min):nRyrs){ //8:42
+  for(y in (A+a_min):nRyrs){ 
     lnRm_1[y] = lnS[y-a_max] + ln_alpha[y-a_max] - beta * S[y-a_max]; //ln_alpha[y-a_max] links it to the spawners
     lnresid[y] = lnR[y] - lnRm_1[y];
   }
@@ -103,17 +108,17 @@ transformed parameters{
 model{
   // Priors
   sigma_tot ~ gamma(2,1);
-  F_rw ~ beta(2,5); // HH changed from beta(2,4)
+  F_rw ~ beta(2,5); 
   ln_alpha0 ~ normal(1,4);
   alpha_dev ~ std_normal();                    //standardized (z-scales) deviances
-  //sigma_alpha ~ normal(0,1);
-  beta ~ normal(0,1);
-  //sigma_R ~ normal(0,2);
+  sigma_alpha ~ normal(0,1);
+  S_max ~ normal(prior_S_max*0.5, prior_S_max*1.5); 
+  sigma_R ~ normal(0,2);
   lnresid_0 ~ normal(0,20);
   mean_ln_R0 ~ normal(0,20);
   sigma_R0 ~ gamma(2,1); 
   prob ~ beta(1,1);
-  D_scale ~ beta(1,1);
+  D_scale ~ beta(1,1); #was 1,1, trying 8,1 per curry's suggestion
 
   // Likelihoods
   // Gamma variates for each year and age class which are used to determine age at maturity proportions
@@ -142,9 +147,8 @@ generated quantities {
   //benchmarks
   
   //prior and posterior predictive check
-  //below is what I did for fraser pink, but I wonder if I should:
-    //-add A_obs and 
-    //-makle the CVs rng too
+  //below is what I did for fraser pink, but I wonder if I should add A_obs?
+
   array[nyrs] real H_rep;
   array[nyrs] real S_rep;
 

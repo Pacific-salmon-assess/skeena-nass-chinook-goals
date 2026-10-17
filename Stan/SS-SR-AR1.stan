@@ -11,19 +11,20 @@ data{
   vector[nyrs] H_obs; // observed harvest
   vector[nyrs] S_cv;  // spawner observation error CV
   vector[nyrs] H_cv;  // harvest observation error CV
+  real prior_S_max;   // mean on prior for Smax
 }
 
 parameters{
   vector<lower=0>[nRyrs] lnR;             // log recruitment states
   real<lower=0> lnalpha;                  // log Ricker a
-  real<lower=0> beta;                     // Ricker b
+  real<lower=0> S_max;                    // Spawners that maximize recruits (i.e. 1/ricker beta)
   real<lower=0> sigma_R;                  // process error
   real<lower=0> sigma_R0;                 // process error for first a.max years with no spawner link
   real<lower=-1,upper=1> phi;             // lag-1 correlation in process error
   real lnresid_0;                         // first residual for lag-1 correlation in process error
   real<lower=0> mean_ln_R0;               // "true" mean log recruitment in first a.max years with no spawner link
   vector<lower=0.01,upper=0.99>[nyrs] U;  // harvest rate
-  vector<lower=0,upper=1>[A-1] prob;      // maturity schedule probs, nested so 1 less than classes, final class is the leftovers of these 3
+  vector<lower=0,upper=1>[A-1] prob;      // maturity schedule probs, nested so 1 less than classes, final class is the leftovers of these A-1
   real<lower=0,upper=1> D_scale;          // governs variability of age proportion vectors across cohorts
   matrix<lower=0.01>[nRyrs, A] g;         // individual year/age class gamma variates for generating age at maturity proportions
 }
@@ -36,8 +37,8 @@ transformed parameters{
   vector[nyrs] lnC;                     // log catch states
   vector<lower=0>[nRyrs] R;             // recruitment states
   real<lower=0> sigma_R_corr;           // log-normal bias-corrected process error
-  vector[nRyrs] lnresid;                // log recruitment residuals ## diff between below?
-  vector[nRyrs] lnRm_1;                 // log recruitment states in absence of lag-one correlation ##diff with above?
+  vector[nRyrs] lnresid;                // log recruitment residuals
+  vector[nRyrs] lnRm_1;                 // log recruitment states in absence of lag-one correlation 
   vector[nRyrs] lnRm_2;                 // log recruitment states after accounting for lag-one correlation
   matrix<lower=0>[nyrs, A] N_ta;        // returns by age matrix
   matrix<lower=0, upper=1>[nRyrs, A] p; // age at maturity proportions
@@ -45,6 +46,7 @@ transformed parameters{
   real<lower=0> D_sum;                  // inverse of D_scale which governs variability of age proportion vectors across cohorts (lower is less variable)
   vector<lower=0>[A] Dir_alpha;         // Dirichlet shape parameter for gamma distribution used to generate vector of age-at-maturity proportions
   matrix<lower=0, upper=1>[nyrs, A] q;  // age composition by year/age class matrix
+  real beta;                            // Ricker beta
 
   // Maturity schedule: use a common maturation schedule to draw the brood year specific schedules
   pi[1] = prob[1];
@@ -59,13 +61,14 @@ transformed parameters{
     }
   }
 
+  beta = 1/S_max; 
   R = exp(lnR);
-  sigma_R_corr = (sigma_R*sigma_R)/2;
+  sigma_R_corr = (sigma_R*sigma_R)/2; //why not a phi correciton?
 
   // Calculate the numbers at age matrix as brood year recruits at age (proportion that matured that year)
   for (t in 1:nyrs) {
     for(a in 1:A){
-      N_ta[t,a] = R[t+A-a] * p[t+A-a,a]; //why "-a"" in both brackets?? ref the excel visual, R&p are longer than these
+      N_ta[t,a] = R[t+A-a] * p[t+A-a,a];
      }
   }
 
@@ -92,8 +95,8 @@ transformed parameters{
     lnRm_2[i] = 0.0;
   }
 
-  for (y in (A+a_min):nRyrs) { // Why start at 8? is this the first fully linked year?
-    lnRm_1[y] = lnS[y-a_max] + lnalpha - beta * S[y-a_max]; //index is like [8-7]
+  for (y in (A+a_min):nRyrs) { 
+    lnRm_1[y] = lnS[y-a_max] + lnalpha - beta * S[y-a_max]; 
     lnresid[y] = lnR[y] - lnRm_1[y];
   }
 
@@ -106,14 +109,15 @@ transformed parameters{
 
 model{
   // Priors
-  lnalpha ~ normal(1,2);
-  beta ~ normal(0,1);
+  lnalpha ~ normal(1,1);
+  S_max ~ normal(prior_S_max*0.5, prior_S_max*1.5); 
   sigma_R ~ normal(0,2);
-  lnresid_0 ~ normal(0,20);
+  lnresid_0 ~ normal(0,20); //COULD cause bad start
   mean_ln_R0 ~ normal(0,20);
   sigma_R0 ~ inv_gamma(2,1); 
   prob ~ beta(1,1);
-  D_scale ~ beta(1,1);
+  D_scale ~ beta(1,1); 
+  phi ~ uniform(-1, 1);
 
   // Likelihoods
   // Gamma variates for each year and age class which are used to determine age at maturity proportions
@@ -141,12 +145,10 @@ model{
 }
 
 generated quantities {
-  //benchmarks
+  //benchmarks ? 
   
-  //prior and posterior predictive check
-  //below is what I did for fraser pink, but I wonder if I should:
-    //-add A_obs and 
-    //-makle the CVs rng too?
+  //posterior predictive check
+  //below is what I did for fraser pink, but I wonder if I should/can add A_obs?
   array[nyrs] real H_rep;
   array[nyrs] real S_rep;
 
