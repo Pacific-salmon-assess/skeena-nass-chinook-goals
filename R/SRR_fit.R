@@ -32,25 +32,21 @@ if(refit == TRUE){
                       "H_cv" = sp_har1$harv_cv,
                       "prior_S_max" = max(sp_har1$spwn)) #data for Smax priors
     
-    cat("\n====================================\n")
-    cat("Fitting AR1 to CU:", i, "\n")
-    cat("====================================\n")
-    flush.console()
-    
+    cat("Fitting AR1 to", i, "===================================\n")
+
     AR1.fit <- stan(file = here("Stan/SS-SR-AR1.stan"),
                     data = stan.data,
                     cores = 4,
                     seed = 2,
                     iter = 4000)
     
+    check_divergences(AR1.fit)
+    
     saveRDS(AR1.fit, here("data/generated/model_fits/AR1",
                           paste0(i, "_AR1.rds")))
     
-    cat("\n====================================\n")
-    cat("Fitting TVA to CU:", i, "\n")
-    cat("====================================\n")
-    flush.console()
-    
+    cat("Fitting TVA to", i, "===================================\n")
+
     TV.fit <- stan(file = here("Stan/SS-SR-TVA.stan"),
                    data = stan.data,
                    cores = 4,
@@ -58,12 +54,12 @@ if(refit == TRUE){
                    iter = 4000,
                    control = list(adapt_delta = 0.999,
                                   max_treedepth = 20))
+    check_divergences(TV.fit)
     
     saveRDS(TV.fit, here("data/generated/model_fits/TVA/",
                          paste0(i, "_TVA.rds")))
   }
 }
-
 
 #fit IWAM prior models--------------------------------------------------------------------
 
@@ -77,11 +73,8 @@ cbind(unique(IWAM_sp_har$CU),
 
 if(TRUE){
   for(i in unique(IWAM_sp_har$CU)){
-    cat("\n====================================\n")
-    cat("Fitting CU:", i, "\n")
-    cat("====================================\n")
-    flush.console()
-    
+    cat("Fitting IWAM AR1 to", i, "===================================\n")
+
     sp_har1 <- filter(IWAM_sp_har, CU == i)
     
     yrs1 <- filter(yrs, CU == i)
@@ -108,11 +101,9 @@ if(TRUE){
                     data = IWAM.stan.data,
                     cores = 4,
                     seed = 2,
-                    iter = 4000)#, 
-                    #refresh = 100, 
-                    #verbose = TRUE)
+                    iter = 4000)
     
-    check_hmc_diagnostics(IWAM.AR1.fit)
+    check_divergences(IWAM.AR1.fit)
     
     saveRDS(IWAM.AR1.fit, here("data/generated/model_fits/IWAM",
                           paste0(i, "_IWAM_AR1.rds")))
