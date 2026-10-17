@@ -144,6 +144,28 @@ yrs <- sp_har |>
   summarise(nyrs = max(year)-min(year)+1, 
             nRyrs = nyrs + A - 1)
 
+# integrate IWAM estimates from internal google drive folder WatershedAreaIWAM/.../IWAMEstimates
+  ## WANT SD RIGHT FROM IWAM, not p5, p95... 
+
+IWAM <- read.csv(here("data/IWAM/OriginalCUs_out_2026-10-17.csv")) |>
+  mutate(sd = (SMAX_upr95 - SMAX_lwr5)/3.2897) |> #ASSUMES NORMAL DIST - WRONG!! but using for now
+  select(CU, SMAX_mean, sd) |>
+  arrange(CU)
+
+#Some problems with making the IWAM match the sp_har data:
+  #what to do for kitsumkalum? combine early & late?
+
+IWAM_priors <- filter(IWAM, CU %in% c(#"Kalum-Early Timing", #"Kalum-Late Timing", #COMBINE THESE?? Pick one? leaving for now
+                                      "Middle Skeena-Large Lakes", #assuming this == "Large Lakes" in sp_har
+                                      "Portland Sound-Observatory Inlet-Lower Nass", 
+                                      "Lower Skeena", 
+                                      "Middle Skeena-Mainstem Tributaries", #assuming this == "Middle Skeena" in sp_har
+                                      "Upper Nass", 
+                                      "Upper Skeena", 
+                                      "Zymoetz"))
+
+IWAM_priors$CU <- c("Lower Skeena", "Large Lakes", "Middle Skeena", "Lower Nass", 
+                    "Upper Nass", "Upper Skeena", "Zymoetz") #rename to match sp_har
 rm(A_obs, a_obs, nass_A_obs, nass_sp_har, i, run_reconstruction_table_summary_with_uncertainty)
 
 
