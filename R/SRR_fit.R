@@ -32,7 +32,7 @@ if(refit == TRUE){
                       "H_cv" = sp_har1$harv_cv,
                       "prior_S_max" = max(sp_har1$spwn)) #data for Smax priors
 
-    AR1.fit <- stan(file = here("Stan/SS-SR-AR1-Smax.stan"),
+    AR1.fit <- stan(file = here("Stan/SS-SR-AR1.stan"),
                     data = stan.data,
                     cores = 4,
                     seed = 2,
@@ -41,7 +41,7 @@ if(refit == TRUE){
     saveRDS(AR1.fit, here("data/generated/model_fits/AR1",
                           paste0(i, "_AR1.rds")))
     
-    TV.fit <- stan(file = here("Stan/SS-SR-TVA-Smax.stan"),
+    TV.fit <- stan(file = here("Stan/SS-SR-TVA.stan"),
                    data = stan.data,
                    cores = 4,
                    seed = 2,
