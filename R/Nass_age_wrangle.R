@@ -78,7 +78,7 @@ nass_age_length_raw <- nass_ages |>
 
 # female length at age ----
 ggplot(nass_age_length_raw, aes(x = Year, y = MEF)) +
-  stat_summary(fun = mean, geom = "point", size = 3,col="dark grey") + # Add points for the mean
+  stat_summary(fun = mean, geom = "point", size = 3, col="dark grey") + # Add points for the mean
   stat_summary(
     fun.data = mean_cl_boot, # Calculate mean and standard error
     geom = "errorbar",
@@ -101,20 +101,43 @@ ggplot(nass_ages |> filter(Location == "GW fishwheels", between(age,4,6)), aes(x
   labs(fill = "Age")
 
 # age comps for spawner recruitment modelling (use GW fishwheels as only source of data across years) ----
-SR_age_comps <- nass_ages |>
+SR_age_props <- nass_ages |>
   filter(Location == "GW fishwheels",
          between(age,4,6)) |>
   count(Year, age) |>
   group_by(Year) |>
   mutate(year_total = sum(n),
-         prop_count = (n/year_total)*100) |>
+         prop_count = n/year_total) |>
   select(Year, age, prop_count) |>
   pivot_wider(names_from = age, values_from = prop_count) |>
   rename(a4 = '4', 
          a5 = '5', 
          a6 = '6')
 
-write.csv(SR_age_comps, here("data/Nass_Aobs_16Feb2026.csv"),row.names = FALSE)
+SR_age_obs <- nass_ages |>
+  filter(Location == "GW fishwheels",
+         between(age,4,6)) |>
+  count(Year, age) |>
+  group_by(Year) |>
+  mutate(year_total = sum(n)) |>
+  select(Year, age, year_total) |>
+  pivot_wider(names_from = age, values_from = year_total) |>
+  rename(a4 = '4', 
+         a5 = '5', 
+         a6 = '6') |>
+  mutate(ESS = sum(a4:a6))
+
+SR_age_obs$ESS_scaled <- SR_age_obs$ESS/max(SR_age_obs$ESS)*100 #scale so max is 100
+
+min(SR_age_obs$ESS_scaled) > 10 #Min ESS needs to be > 10
+
+Nass_A_obs <- SR_age_props |>
+  cbind(ESS_scaled = SR_age_obs$ESS_scaled) |>
+  mutate_at(2:4, ~.x*ESS_scaled) |>
+  mutate_if(is.numeric, round) |>
+  mutate_at(2:4, ~ replace(.x, .x == 0, 1)) #replace 0 with 1 so stan can still estimate #s at age
+  
+write.csv(Nass_A_obs, here("data/Nass_Aobs_19Oct2026.csv"),row.names = FALSE)
 
 # reproductive potential multi-panel plot ----
 
