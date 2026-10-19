@@ -11,7 +11,8 @@ data{
   vector[nyrs] H_obs; // observed harvest
   vector[nyrs] S_cv;  // spawner observation error CV
   vector[nyrs] H_cv;  // harvest observation error CV
-  real prior_S_max;   // mean on prior for Smax
+  real IWAM_prior;    // IWAM mean on prior for Smax
+  real IWAM_prior_sd;// IWAM mean on prior for Smax 
 }
 
 parameters{
@@ -110,7 +111,7 @@ transformed parameters{
 model{
   // Priors
   lnalpha ~ normal(1,1);
-  S_max ~ normal(prior_S_max*0.5, prior_S_max*1.5); 
+  S_max ~ normal(IWAM_prior, IWAM_prior_sd); 
   sigma_R ~ normal(0,2);
   lnresid_0 ~ normal(0,20); //COULD cause bad start
   mean_ln_R0 ~ normal(0,20);
