@@ -240,6 +240,7 @@ for(i in unique(sp_har$CU)){ # Loop over CUs to process model outputs
            year = unique(sub_dat$year))
   
   TV.harv <- bind_rows(TV.harv, TV.harv.quant)
+
 }  # End data wrangling loop by CU
 
 
@@ -274,7 +275,7 @@ TV.spwn <- left_join(TV.spwn, CU_SMU, by = "CU")
 TV.SR.preds <- left_join(TV.SR.preds, CU_SMU, by = "CU")
 tva.par.summary.out <- left_join(tva.par.summary.out, CU_SMU, by = "CU")
 
-  # write important tables to repo ---------------------------------------------------------
+# write important tables to repo ---------------------------------------------------------
 bench.par.table <- bench.par.table |> # AR1 SR model pars and benchmarks
   relocate(CU, 1) |>
   relocate(SMU, .after = 1) |>
@@ -287,6 +288,80 @@ colnames(bench.par.table) <- c("CU", "SMU", "par", "mean", "median", "lwr", "upr
 
 write.csv(bench.par.table, here("data/generated/bench_par_table.csv"),
           row.names = FALSE)
+
+# Separate loop to process IWAM model outputs (because diff. # of CUs) -------------------
+IWAM.SR.preds <- NULL
+IWAM.bench.posts <- NULL
+
+for(i in unique(IWAM_priors$CU)){
+  
+  ## CAN DEF DELETE SOME FLUFF FROM THIS LOOP!
+  sub_dat <- filter(sp_har, CU==i)
+  nyrs <- filter(yrs, CU==i)$nyrs
+  nRyrs <- filter(yrs, CU==i)$nRyrs
+  
+  sub_pars <- rstan::extract(IWAM.fits[[i]])
+  
+  #latent states of spawners and recruits---
+  spwn.quant <- apply(sub_pars$S, 2, quantile, probs = probs_80)[,1:(nyrs-a_min)]
+  rec.quant <- apply(sub_pars$R, 2, quantile, probs = probs_80)[,(a_max+1):nRyrs]
+  
+  brood_t <- as.data.frame(cbind(sub_dat$year[1:(nyrs-a_min)], t(spwn.quant), t(rec.quant))) |>
+    round(2) 
+  
+  colnames(brood_t) <- c("BroodYear","S_lwr","S_med","S_upr","R_lwr","R_med","R_upr")
+  
+  brood_t <- mutate(brood_t, CU = i)
+  
+  #SR relationship based on full posterior---
+  spw <- seq(0,max(brood_t$S_upr),length.out=100)
+  SR.pred <- matrix(NA,length(spw), length(sub_pars$lnalpha))
+  bench <- matrix(NA,length(sub_pars$lnalpha),9,
+                  dimnames = list(seq(1:length(sub_pars$lnalpha)), c("Sgen", "Smsy", "Umsy", 
+                                                                     "Seq", "Smsr", "S.recent",
+                                                                     "Smsr.20","Smsr.40", "Smsy.80")))
+  
+  par <- matrix(NA,length(sub_pars$lnalpha),4,
+                dimnames = list(seq(1:length(sub_pars$lnalpha)), c("sample","ln_a","beta", "S_max")))
+  
+  # get benchmarks & pars (AR1 model)------------------------------------------------------------------
+  
+  for(j in 1:length(sub_pars$lnalpha)){
+    ln_a <- sub_pars$lnalpha[j]
+    b <- sub_pars$beta[j]
+    S_max <- sub_pars$S_max[j]
+    
+    SR.pred[,j] <- (exp(ln_a)*spw*exp(-b*spw))
+    
+    bench[j,2] <- get_Smsy(ln_a, b)
+    bench[j,1] <- get_Sgen(exp(ln_a),b,-1,1/b*2, bench[j,2])
+    bench[j,3] <- (1 - lambert_W0(exp(1 - ln_a))) #U_MSY
+    bench[j,4] <- ln_a/b #S_eq
+    bench[j,5] <- 1/b #S_msr
+    bench[j,6] <- exp(mean(log(sub_pars$S[j, (nyrs-5):nyrs]))) #S recent - mean spawners in last generation
+    bench[j,7] <- (1/b)*0.2
+    bench[j,8] <- (1/b)*0.4
+    bench[j,9] <- get_Smsy(ln_a, b)*0.8 # 80% Smsy
+    
+    par[j,1] <- j
+    par[j,2] <- ln_a
+    par[j,3] <- b
+    par[j,4] <- S_max
+    
+  }
+  
+  SR.pred <- as.data.frame(cbind(spw,t(apply(SR.pred, 1, quantile, probs = probs_80, na.rm=T))))|>
+    round(2) |>
+    mutate(CU = i, 
+           SMU = unique(sub_dat$SMU))
+  
+  IWAM.SR.preds <- rbind(IWAM.SR.preds, SR.pred)
+  
+  IWAM.bench.posts <- rbind(IWAM.bench.posts, as.data.frame(bench) |> mutate(CU = i))
+  
+}
+
+colnames(IWAM.SR.preds) <- c("Spawn", "Rec_lwr","Rec_med","Rec_upr", "CU", "SMU")
 
 #remove helpers
 rm(a.yrs, AR1.fits, bench, bench.quant, brood_t, brood_t.long, par, par_TVA, par.quants, 
