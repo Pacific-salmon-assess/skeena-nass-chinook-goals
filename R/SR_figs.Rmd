@@ -90,7 +90,7 @@ This prior is a normal distribution with a mean of half the maximum observed spa
 S_max_plot_data <- sp_har |>
   filter(SMU == "Skeena") |>
   group_by(CU) |>
-  summarise(rnorm(nrow(filter(par.posts, SMU == "Skeena"))/length(unique(filter(sp_har, SMU == "Skeena")$CU)), 
+  reframe(rnorm(nrow(filter(par.posts, SMU == "Skeena"))/length(unique(filter(sp_har, SMU == "Skeena")$CU)), 
                   max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
   cbind(filter(par.posts, SMU == "Skeena")$S_max) 
   
@@ -415,7 +415,7 @@ This prior is a normal distribution with a mean of half the maximum observed spa
 S_max_plot_data <- sp_har |>
   filter(SMU == "Nass") |>
   group_by(CU) |>
-  summarise(rnorm(nrow(filter(par.posts, SMU == "Nass"))/length(unique(filter(sp_har, SMU == "Nass")$CU)), 
+  reframe(rnorm(nrow(filter(par.posts, SMU == "Nass"))/length(unique(filter(sp_har, SMU == "Nass")$CU)), 
                   max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
   cbind(filter(par.posts, SMU == "Nass")$S_max) 
   
@@ -687,3 +687,52 @@ cowplot::plot_grid(a, b, labels = "auto", ncol = 1, rel_heights = c(0.6,1))
 
 Here we compare the above AR1 model to the same model fit with an informative $S_{Max}$ prior based on an estimate Integrated Watershed Area Model (IWAM) developed by *people...* and adapted to this system by Mairin.  
 
+First we'll simply compare $S_{Max}$ posteriors: 
+
+```{r IWAM posterior compare}
+IWAM.post.compare <- bench.posts |>
+  filter(CU %in% IWAM_priors$CU) |>
+  mutate(fit = "AR1") |>
+  bind_rows(IWAM.bench.posts) |>
+  mutate(fit = replace_na(fit, "IWAM-AR1"))
+
+ggplot(IWAM.post.compare, aes(Smsr/1000)) +
+    geom_density(aes(fill = fit, color = fit), alpha = 0.5) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_Max (000s)", fill = "", color = "") +
+  theme_sleek()
+
+
+```
+
+Then see what this means for the SR fit:
+
+```{r SR compare IWAM to AR1}
+IWAM.SR.compare <- SR.preds |>
+  filter(CU %in% IWAM_priors$CU) |>
+  mutate(fit = "AR1") |>
+  bind_rows(IWAM.SR.preds) |>
+  mutate(fit = replace_na(fit, "IWAM-informed-AR1"))
+
+# SR fits ----
+ggplot() +
+  geom_abline(intercept = 0, slope = 1,col="dark grey") +
+  geom_ribbon(data = IWAM.SR.compare, 
+              aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000, 
+                  fill = fit,  colour=fit), alpha=0.5, linetype=2) +
+  #geom_errorbar(data = filter(brood.all, SMU == "Skeena"), 
+  #              aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
+  #              colour="grey", width=0, linewidth=0.3) +
+  #geom_errorbar(data = filter(brood.all, SMU == "Skeena"), 
+  #               aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
+  #               height=0, colour = "grey", linewidth = 0.3) +
+  #geom_point(data = filter(brood.all, SMU == "Skeena"),
+  #           aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
+  geom_line(data = IWAM.SR.compare, 
+            aes(x = Spawn/1000, y = Rec_med/1000, colour = fit)) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "Spawners (000s)", y = "Recruits (000s)") +
+  theme_sleek()
+```
