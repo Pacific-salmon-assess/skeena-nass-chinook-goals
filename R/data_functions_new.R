@@ -69,12 +69,17 @@ ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + #add the 3 age cohorts t
   mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
   pivot_longer(-year, names_to = "CU") |>
   rename(ESS = value) |>
+  mutate(CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
   arrange(year, CU, ESS)
 
+hist(ESS_Skeena$ESS)
+
 ESS_Skeena <- ESS_Skeena |>
-  mutate(ESS_scaled = ESS/max(ESS_Skeena$ESS)*100) |> #PROBLEM scaling to aggregate here ? 
-  mutate(ESS_scaled = ifelse(ESS_scaled < 10, 10, ESS_scaled), 
-         CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU))
+  mutate(ESS_scaled = ESS/max(filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS)*100) |> #WITHOUT aggregate
+  mutate( ESS_scaled = ifelse(CU== "Skeena Aggregate", 100, ESS_scaled), 
+          ESS_scaled = ifelse(ESS_scaled < 10, 10, ESS_scaled))
+
+hist(ESS_Skeena$ESS_scaled) #gross
 
 A_obs <- A_obs |>
   left_join(ESS_Skeena, by = c("CU", "year")) |>
