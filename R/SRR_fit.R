@@ -4,8 +4,6 @@ library(rstan)
 
 source(here("R/data_functions.R"))
 
-set.seed(2)
-
 #refit <- FALSE #toggle T/F if you want to refit models
 refit <- TRUE
 
@@ -36,9 +34,11 @@ if(refit == TRUE){
 
     AR1.fit <- stan(file = here("Stan/SS-SR-AR1.stan"),
                     data = stan.data,
-                    cores = 4,
-                    seed = 2,
-                    iter = 4000)
+                    seed = 1,
+                    iter = 4000,
+                    refresh = 0, #hide long list of timing updates
+                    control = list(adapt_delta = 0.995,
+                                   max_treedepth = 20))
     
     check_divergences(AR1.fit)
     
@@ -49,10 +49,10 @@ if(refit == TRUE){
 
     TV.fit <- stan(file = here("Stan/SS-SR-TVA.stan"),
                    data = stan.data,
-                   cores = 4,
-                   seed = 2,
+                   seed = 1,
                    iter = 4000,
-                   control = list(adapt_delta = 0.999,
+                   refresh = 0,
+                   control = list(adapt_delta = 0.995,
                                   max_treedepth = 20))
     check_divergences(TV.fit)
     
@@ -92,16 +92,18 @@ if(TRUE){
                       "A_obs" = A_obs1,
                       "S_obs" = sp_har1$spwn,
                       "H_obs" = sp_har1$harv,
-                      "S_cv" = sp_har1$spwn_cv,
+                      "S_cv" = sp_har1$spwn_cv, 
                       "H_cv" = sp_har1$harv_cv,
                       "IWAM_prior" = IWAM_prior$SMAX_mean, #data for Smax priors
                       "IWAM_prior_sd" = IWAM_prior$sd) 
     
     IWAM.AR1.fit <- stan(file = here("Stan/SS-SR-AR1-IWAM-prior.stan"),
                     data = IWAM.stan.data,
-                    cores = 4,
-                    seed = 2,
-                    iter = 4000)
+                    seed = 1,
+                    iter = 4000,
+                    refresh = 0,
+                    control = list(adapt_delta = 0.995,
+                                   max_treedepth = 20))
     
     check_divergences(IWAM.AR1.fit)
     
