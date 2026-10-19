@@ -62,11 +62,14 @@ A_obs <- A_obs |>
 
 rownames(A_obs) <- NULL
   
-ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + skrunchy2025::n_age_observations[,,2] + skrunchy2025::n_age_observations[,,3]) |>
+ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + #add the 3 age cohorts together
+                  skrunchy2025::n_age_observations[,,2] + 
+                  skrunchy2025::n_age_observations[,,3]) |>
   as.data.frame() |>
   mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
   pivot_longer(-year, names_to = "CU") |>
-  rename(ESS = value)
+  rename(ESS = value) |>
+  arrange(year, CU, ESS)
 
 ESS_Skeena <- ESS_Skeena |>
   mutate(ESS_scaled = ESS/max(ESS_Skeena$ESS)*100) |> #PROBLEM scaling to aggregate here ? 
