@@ -1,25 +1,44 @@
 library(tidyverse)
 library(here)
-#library(devtools) #comment out below if you need to install skrunchy
+library(devtools) #comment out below if you need to install skrunchy
 #install_github("Pacific-salmon-assess/skrunchy")
 #install_github("lukewarkentin/skrunchy2025")
 library(skrunchy2025)
+load(here("data/run_reconstruction_table_summary_with_uncertainty.rda")) # hack for now - figure out how to read in from pkg like below
 
 #-----------------------------------------------------------------------------------------
 # read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO)'s package
   #and Nass data from Ian Beveridge & Richard Alexander (LGL)
+if(FALSE){ ##FIX THIS! 
+  sp_har <- skrunchy2025::run_reconstruction_table|> ## get new name from Luke
+    ##select CVs 
+    select(i_population, y_return_year, W_star_wild_spawners, total_harvest_estimate) |>
+    rename(CU = i_population, 
+           year = y_return_year) |>
+    group_by(CU, year) |>
+    summarise(spwn = round(sum(W_star_wild_spawners, na.rm = TRUE)), #sum across ages
+              harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
+    mutate(SMU = "Skeena", 
+           CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
+    arrange(CU, year) |>
+    as.data.frame()
+}
 
-sp_har <- skrunchy2025::run_reconstruction_table |>
-  select(i_population, y_return_year, W_star_wild_spawners, total_harvest_estimate) |>
-  rename(CU = i_population, 
-         year = y_return_year) |>
-  group_by(CU, year) |>
-  summarise(spwn = round(sum(W_star_wild_spawners, na.rm = TRUE)), #sum across ages
-            harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
-  mutate(SMU = "Skeena", 
+sp_har <- run_reconstruction_table_summary_with_uncertainty |>
+  filter(variable %in% c("W_wild_spawners", "harvest")) |> ##LUKE - ARE THESE RIGHT?
+  rename(year = y_return_year, 
+         CU = i_population) |>
+  mutate(cv = ifelse(cv == 0, 0.2, cv), 
+         variable = ifelse(variable == "W_wild_spawners", "spwn", "harv"),
+         SMU = "Skeena", 
          CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
+  select(-p5, -p95, -sd) |>
+  pivot_wider(names_from = variable, values_from = c(mean, cv))  |>
   arrange(CU, year) |>
+  relocate(SMU, 1) |>
   as.data.frame()
+
+colnames(sp_har) <- c("SMU", "CU", "year", "spwn", "harv", "spwn_cv", "harv_cv")
 
 A_obs <- NULL #empty object to bind to
 for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
@@ -29,6 +48,7 @@ for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
   A_obs <- bind_rows(A_obs, a_obs)
 }
  
+## do I want to do RAW a_obs? - get from luke
 A_obs <- A_obs |>
   mutate(`6` = `6` +`7`) |>
   rename(a4 = `4`, 
@@ -44,15 +64,32 @@ A_obs <- A_obs |>
          CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU))
 
   rownames(A_obs) <- NULL
+  
+#was looking at this to get raw A_obs - seems janky
+  if(FALSE){ #NEED TO FIX THIS LATER - IT'S DROPPING AGES
+    # correct Skeena for uneven ESS - STILL NEED TO DO FOR NASS! 
+    ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + skrunchy2025::n_age_observations[,,2] + skrunchy2025::n_age_observations[,,2]) |>
+      as.data.frame() |>
+      mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
+      pivot_longer(-year, names_to = "CU") |>
+      rename(ESS = value)
+    
+    A_obs <- A_obs |>
+      left_join(ESS_Skeena, by = c("CU", "year")) |>
+      mutate(a4 = (a4/100)*ESS, #revet fromm scaled to 100 to calculated ESS. 
+             a5 = (a5/100)*ESS, 
+             a6 = (a6/100)*ESS) |>
+      select(-ESS)
+  }
 
 # read in Nass data - this data was processed by copy & pasting LGL's data and calculating 
   # new vars (i.e. combining age groups and calc'ing harvest) all in excel as a placeholder
 
 # age data is aggregate for nass - no CU level data
-nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))# |> #THESE are PROPS at age - where's raw? 
+nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))# |> #THESE are PROPS scaled to 100 at age - where's the raw? 
   #mutate(sum = a4+a5+a6)
 
-#make dataset long and add CU names since they are shared among all CUs 
+#make dataset long and add CU names since they are shared among all CUs - this will be an important consideration for modelling
   #hacky fix so it lines up for how skeena code is written
 nass_A_obs <- bind_rows(nass_A_obs, nass_A_obs, nass_A_obs) |> 
   mutate(CU = c(rep("Upper Nass", nrow(nass_A_obs)), 
@@ -61,25 +98,8 @@ nass_A_obs <- bind_rows(nass_A_obs, nass_A_obs, nass_A_obs) |>
          SMU = "Nass") |>
   rename(year = Year)
 
-nass_sp_har <- read.csv(here("data/Nass_SpHar_3June2026.csv"))
-
-#check years so we know to put only fully observed in aggregate
-#nass_sp_har |>
-#  group_by(CU) |>
-#  summarise(min(year), 
-#            max(year))
-
-#nass_sp_har_agg <- nass_sp_har |>
-#  filter(year >= 1994) |> #based on above
-  ##ASSUMPTION TO ADDRESS BELOW - infill NAs, then take mean?
-#  mutate(spwn_cv = ifelse(is.na(spwn_cv), 0.5, spwn_cv)) |>  #0.5: upper end of empirical CVs
-#  group_by(SMU, year) |>
-#  summarise(spwn = sum(spwn), 
-#            harv = sum(harv), 
-#            spwn_cv = mean(spwn_cv)) |>
-#  mutate(CU = "Nass Aggregate")
-
-#nass_sp_har <- bind_rows(nass_sp_har, nass_sp_har_agg)
+nass_sp_har <- read.csv(here("data/Nass_SpHar_3June2026.csv")) |>
+  select(-X)
 
 #bind skeena and nass
 prop_age <- bind_rows(A_obs, nass_A_obs) |> #for plotting later
@@ -87,23 +107,6 @@ prop_age <- bind_rows(A_obs, nass_A_obs) |> #for plotting later
          a5 = a5/100, 
          a6 = a6/100) |>
   relocate(SMU, .after = 1)
-
-if(FALSE){ #NEED TO FIX THIS LATER - IT'S DROPPING AGES
-  # correct Skeena for uneven ESS - STILL NEED TO DO FOR NASS! 
-  ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + skrunchy2025::n_age_observations[,,2] + skrunchy2025::n_age_observations[,,2]) |>
-    as.data.frame() |>
-    mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
-    pivot_longer(-year, names_to = "CU") |>
-    rename(ESS = value)
-  
-  A_obs <- A_obs |>
-    left_join(ESS_Skeena, by = c("CU", "year")) |>
-    mutate(a4 = (a4/100)*ESS, #revet fromm scaled to 100 to calculated ESS. 
-           a5 = (a5/100)*ESS, 
-           a6 = (a6/100)*ESS) |>
-    select(-ESS)
-}
-
 
 A_obs <- bind_rows(A_obs, nass_A_obs) |>
   mutate_if(is.numeric, round, 0)
@@ -114,24 +117,24 @@ sp_har <- bind_rows(sp_har, nass_sp_har) |>
 
 #check timeseries of complete dataset
 A_obs |>
-  group_by(CU) |>
+  group_by(SMU, CU) |>
   summarise(min(year), max(year))
 
 sp_har |>
-  group_by(CU) |>
+  group_by(SMU, CU) |>
   summarise(min(year), max(year))
 
 #merge and filter dfs so they have complete years of data among CUs
   # could make this robust depending on our final data... 
 sp_har <- left_join(sp_har, A_obs, by = c("CU", "year", "SMU")) |> 
   filter(!is.na(a4)) |> #remove years of NA age obs once joined
-  mutate(harv_cv = 0.3, #assumed harvest CV
-         spwn_cv = replace_na(spwn_cv, 0.5)) |> #replace unknown CVs with assumed
+  mutate(harv_cv = replace_na(harv_cv, 0.3), #replace unknown CVs with assumed
+         spwn_cv = replace_na(spwn_cv, 0.5)) |> 
   arrange(CU, year) |> 
   relocate(harv_cv, .after = spwn_cv) |>
   as.data.frame() 
 
-#calc other indicies
+# other indicies needed for model
 a_min <- 4
 a_max <- 6
 A <- a_max - a_min + 1 #total age classes
@@ -139,9 +142,34 @@ A <- a_max - a_min + 1 #total age classes
 yrs <- sp_har |>
   group_by(CU) |>
   summarise(nyrs = max(year)-min(year)+1, 
-            nRyrs = nyrs + A - 1) ## want to be certain this is A not a_min
+            nRyrs = nyrs + A - 1)
 
-rm(A_obs, a_obs, nass_A_obs, nass_sp_har, i)
+# integrate IWAM estimates from internal google drive folder WatershedAreaIWAM/.../IWAMEstimates
+  ## WANT SD RIGHT FROM IWAM, not p5, p95... 
+
+IWAM <- read.csv(here("data/IWAM/OriginalCUs_out_2026-10-17.csv")) |>
+  mutate(sd = (SMAX_upr95 - SMAX_lwr5)/3.2897) |> #ASSUMES NORMAL DIST - using for now
+  select(CU, SMAX_mean, sd) |>
+  arrange(CU)
+
+#Some problems with making the IWAM match the sp_har data:
+  #what to do for kitsumkalum? combine early & late?
+
+IWAM_priors <- filter(IWAM, CU %in% c("Kalum-Late Timing",
+                                      "Middle Skeena-Large Lakes", #assuming this == "Large Lakes" in sp_har
+                                      "Portland Sound-Observatory Inlet-Lower Nass", 
+                                      "Lower Skeena", 
+                                      "Middle Skeena-Mainstem Tributaries", #assuming this == "Middle Skeena" in sp_har
+                                      "Upper Nass", 
+                                      "Upper Skeena", 
+                                      "Zymoetz"))
+
+IWAM_priors$CU <- c("Kitsumkalum", "Lower Skeena", "Large Lakes", "Middle Skeena", "Lower Nass", 
+                    "Upper Nass", "Upper Skeena", "Zymoetz") #rename to match sp_har
+
+IWAM_priors <- arrange(IWAM_priors, CU)
+
+rm(A_obs, a_obs, nass_A_obs, nass_sp_har, i, run_reconstruction_table_summary_with_uncertainty)
 
 
 # functions ------------------------------------------------------------------------------
@@ -151,7 +179,6 @@ my.ggsave <- function(filename = default_name(plot), plot = last_plot(),
                       width= 9, height = 5.562, dpi= 180){
   ggsave(filename=filename, plot = last_plot(), width=width, height=height, dpi=dpi, bg="white")
 }
-
 
 # theme from https://github.com/seananderson/ggsidekick/blob/master/R/theme_sleek.R
 theme_sleek <- function(base_size = 11, base_family = "") {
