@@ -28,6 +28,33 @@ theme_sleek <- function(base_size = 11, base_family = "") {
     )
 }
 
+theme_sleek <- function(base_size = 11, base_family = "") {
+  half_line <- base_size/2
+
+  theme_light(base_size = base_size, base_family = base_family) +
+    theme(
+      panel.grid.major = element_line(
+        colour = "grey85",
+        linewidth = 0.3
+      ),
+      panel.grid.minor = element_blank(),
+
+      axis.ticks.length = unit(half_line / 2.2, "pt"),
+      strip.background = element_rect(fill = NA, colour = NA),
+      strip.text.x = element_text(colour = "grey30"),
+      strip.text.y = element_text(colour = "grey30"),
+      axis.text = element_text(colour = "grey30"),
+      axis.title = element_text(colour = "grey30"),
+      legend.title = element_text(colour = "grey30", size = rel(0.9)),
+      panel.border = element_rect(fill = NA, colour = "grey70", linewidth = 1),
+      legend.key.size = unit(0.9, "lines"),
+      legend.text = element_text(size = rel(0.7), colour = "grey30"),
+      legend.key = element_rect(colour = NA, fill = NA),
+      legend.background = element_rect(colour = NA, fill = NA),
+      plot.title = element_text(colour = "grey30", size = rel(1)),
+      plot.subtitle = element_text(colour = "grey30", size = rel(.85))
+    )
+}
 # Skeena -----
 agg_RR <- sp_har |>
   filter(CU == "Skeena Aggregate") |>
@@ -137,23 +164,26 @@ ggplot(simple.eg, aes(x = run_size, y = HR*100)) +
   geom_line(lwd=1.5, col="dark grey")+
   labs(x="Run size", y="Exploitation rate (%)") +
   scale_y_continuous(limits = c(0, 100)) +
-  theme_sleek()
+  theme_minimal()
+ggsave("plots/eg-HCR.jpeg",width=5,height=3.5)
 
 ggplot(eg.floor, aes(x = run_size, y = HR*100)) +
   geom_line(lwd=1.5, col="dark grey")+
   labs(x="Run size", y="Exploitation rate (%)") +
   scale_y_continuous(limits = c(0, 100)) +
-  theme_sleek()
+  theme_minimal()
+ggsave("plots/eg-floor-HCR.jpeg",width=5,height=3.5)
 
 ggplot(eg.floor.cap, aes(x = run_size, y = HR*100)) +
   geom_line(lwd=1.5, col="dark grey")+
   labs(x="Run size", y="Exploitation rate (%)") +
   scale_y_continuous(limits = c(0, 100)) +
-  theme_sleek()
+  theme_minimal()
+ggsave("plots/eg-floor-ceiling-HCR.jpeg",width=5,height=3.5)
 
 ggplot(eg.floor.cap.lower, aes(x = run_size, y = HR2*100)) +
   geom_line(lwd=1.5, col="dark grey")+
   labs(x="Run size", y="Exploitation rate (%)") +
   scale_y_continuous(limits = c(0, 100)) +
-  theme_sleek()
-
+  theme_minimal()
+ggsave("plots/ramp-HCR.jpeg",width=5,height=3.5)
