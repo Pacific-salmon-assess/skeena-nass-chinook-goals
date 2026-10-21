@@ -110,7 +110,7 @@ transformed parameters{
 model{
   // Priors
   lnalpha ~ normal(1,1);
-  S_max ~ normal(prior_S_max*0.5, prior_S_max*1.5); 
+  S_max ~ normal(prior_S_max*0.75, prior_S_max*1.5); 
   sigma_R ~ normal(0,2);
   lnresid_0 ~ normal(0,20); //COULD cause bad start
   mean_ln_R0 ~ normal(0,20);
