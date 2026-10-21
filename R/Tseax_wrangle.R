@@ -82,3 +82,25 @@ upper_recon <- Middle_nass_escape |>
 
 write.csv(tseax_error,"data/Tseax-esc.csv")
 write.csv(upper_recon,"data/Upper-esc-harv.csv",row.names = F)
+
+# plot GSI contributions ---
+Nass_gsi2 <- Nass_gsi |>
+  group_by(Year) |>
+  mutate(Total_N = sum(N)) |>
+  ungroup() |>
+  mutate(stock = str_trim(stock),
+         stock = factor(stock, levels = c("Cranberry", "Damdochax", "Kiteen", "Kwinageese", 
+                                          "Meziadin","Owegee", "Teigen","Seaskinnish","Snowbank","Tseax","Ishkheenickh","Kincolith","Kwinamass","Kateen")))
+
+ggplot(Nass_gsi2, aes(x = Year, y = gsi, fill = stock)) +
+  geom_col(position = "fill") + 
+  scale_y_continuous(labels = scales::percent) + # Formats axis from 0.0-1.0 to 0%-100%
+  labs(y = "Contribution to total Nass returns") +
+  theme_sleek() +
+  geom_text(aes(x = Year, y = 1.02, label = Total_N), 
+            check_overlap = TRUE, 
+            vjust = 0, 
+            size = 3.5,
+            inherit.aes = FALSE)  
+ggsave("plots/nass/gsi-contr.jpeg",width=9,height=5)
+
