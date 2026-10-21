@@ -687,7 +687,37 @@ cowplot::plot_grid(a, b, labels = "auto", ncol = 1, rel_heights = c(0.6,1))
 
 Here we compare the above AR1 model to the same model fit with an informative $S_{Max}$ prior based on an estimate Integrated Watershed Area Model (IWAM) developed by *people...* and adapted to this system by Mairin.  
 
-First we'll simply compare $S_{Max}$ posteriors: 
+To check if this new prior is restricting the exploration of parameter space, we'll plot the prior and posterior:
+
+```{r IWAM prior-post compare}
+IWAM_S_max_plot_data <- NULL
+for(i in unique(IWAM_priors$CU)){
+  sub_IWAM_post <- filter(IWAM.bench.posts, CU == i)
+  IWAM_S_max_plot_data <- rbind(IWAM_S_max_plot_data, 
+                           data_frame(CU = rep(i, nrow(sub_IWAM_post)), 
+                                      prior = rnorm(nrow(sub_IWAM_post), 
+                                                    filter(IWAM_priors, CU == i)$SMAX_mean,
+                                                    filter(IWAM_priors, CU == i)$sd), 
+                                      posterior = sub_IWAM_post$Smsr))
+}
+
+IWAM_S_max_plot_data <- IWAM_S_max_plot_data |>
+  pivot_longer(-CU, names_to = "par")
+
+ggplot(IWAM_S_max_plot_data, aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_max (000s)") +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek()
+```
+
+Then we'll simply compare $S_{Max}$ posteriors: 
 
 ```{r IWAM posterior compare}
 IWAM.post.compare <- bench.posts |>

@@ -44,11 +44,9 @@ This document provides diagnostic plots for several spawner-recruit models that 
 
 *brief methods description once finalized*
 
-# Diagnostics
-
 We fit the spawner-recruitment model in a Bayesian estimation framework with Stan (Carpenter et al. 2017; Stan Development Team 2023), which implements the No-U-Turn Hamiltonian Markov chain Monte Carlo algorithm (Hoffman and Gelman 2014)) for Bayesian statistical inference to generate a joint posterior probability distribution of all unknowns in the model. The models can be found [here](https://gitlab.com/yukon-jtc/escapement-goal-group/yukon-chum-imeg/-/tree/main/src/Stan?ref_type=heads).We sampled from 4 chains with ***2,000*** iterations each and discarded the first half as warm-up. We assessed chain convergence visually via trace plots and by ensuring that $\hat{R}$ (potential scale reduction factor; Vehtari et al. 2021) was less than 1.1 and that the effective sample size was greater than 200. Posterior predictive checks were used to make sure the model returned known values, by simulating new datasets and checking how similar they were to our observed data.
 
-## Trace plots
+# Trace plots
 
 These should be clearly mixed, with no single distribution deviating substantially from others (left column), and no chains exploring a strange space for a few iterations (right column). "D_scale" is the $D$ term in equation C.4 in the research document and governs variability of age proportion vectors across cohorts."Dir_alpha" refers to Dirichlet shape parameter for the gamma distribution used to generate vector of age-at-maturity proportions.
 
@@ -157,18 +155,55 @@ for(i in unique(sp_har$CU)){
 }
 ```
 
-## ESS and $\hat{R}$
+
+# "Semi-informative" $S_{Max}$ prior  
+
+We used a prior for $S_{Max}$ that was a normal distribution with a mean of half of the maximum observed spawners, with a standard deviaiton of 1.5 times the maximum observed spawners in a given CU. This restricted the $S_{Max}$ paramater space to a distribution that was "biologically reasonable" for the observed data.  
+
+```{r Smax prior-posterior}
+S_max_plot_data <- NULL
+
+for(i in unique(sp_har$CU)){
+  sub_dat <- filter(sp_har, CU==i)
+  sub_AR1_summary <- as.data.frame(rstan::summary(AR1.fits[[i]])$summary)
+  
+  sub_AR1_pars <- rstan::extract(AR1.fits[[i]])
+  S_max_plot_data <- rbind(S_max_plot_data, 
+                           data_frame(CU = rep(i, nrow(sub_AR1_pars$lnalpha)), 
+                                      prior = rnorm(nrow(sub_AR1_pars$lnalpha), 
+                                                    max(sub_dat$spwn)*0.75, #values used for prior
+                                                    max(sub_dat$spwn)*1.5), 
+                                      posterior = sub_AR1_pars$S_max))
+}
+
+#functionally make prior half normal - this is OK - prior is generated above and illustrative.
+S_max_plot_data <- filter(S_max_plot_data, !(par== "prior" & value <=0))
+
+ggplot(S_max_plot_data, aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_max (000s)") +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek()
+```
+
+# ESS and $\hat{R}$
 
 We aimed for minimum effective sample sizes that are greater than ***200*** and $\hat{R}$ values less than 1.1.The tables below summarize the lowest effective sample size (ESS) and largest $\hat{R}$ across all estimated parameters for each CU and class of model.
 
-### AR1 model:
+AR1 model:
 
 ```{r AR1-diag}
 AR1.diag <- left_join(min_ESS_AR1, max_Rhat_AR1, by = "CU")
 kable(AR1.diag)
 ```
 
-### Time varying (TV) model:
+Time varying (TV) model:
 
 ```{r TV-diag}
 TVA.diag <- left_join(min_ESS_TVA, max_Rhat_TVA, by = "CU")
