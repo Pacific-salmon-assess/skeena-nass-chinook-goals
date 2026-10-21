@@ -272,3 +272,32 @@ process.iteration = function(samp) {
   # 4.) return output
   return(output)
 }
+
+#------------------------------------------------------------------------------#
+# functions to estimate spawners associated with maximum yield or recruits,
+#   based on yield per recruit under fishing mortality Fmax under a give age/sex
+#   class-specific reproductive output, and  probability of returning by age/sex
+#------------------------------------------------------------------------------#
+calcCeq <- function(Fmax)
+{
+  U_as <- 1-exp(-Fmax) # assume all ages/sexes equally vulnerable sp set v_as = 1
+  reproOutputPerSpawner <- sum((1-U_as)*z_as*eta_as)
+  alpha <- exp(ln_a)
+  Req <- log(alpha*reproOutputPerSpawner) / (beta*reproOutputPerSpawner)# equilibrium population fished at Fmax
+  Neq_as <- Req * eta_as # age/sex structured abundance
+  Ceq_as <- Neq_as * U_as # age/sex structured harvest
+  Seq_as <<- Neq_as * (1-U_as) # age/sex structured escapement
+  sum(Ceq_as)
+}
+
+calcNeq <- function(Fmax)
+{
+  U_as <- 1-exp(-Fmax) # assume all ages/sexes equally vulnerable sp set v_as = 1
+  reproOutputPerSpawner <- sum((1-U_as)*z_as*eta_as)
+  alpha <- exp(ln_a)
+  Req <- log(alpha*reproOutputPerSpawner) / (beta*reproOutputPerSpawner)# equilibrium population fished at Fmax
+  Neq_as <- Req * eta_as # age/sex structured abundance
+  Ceq_as <- Neq_as * U_as # age/sex structured harvest
+  Seq_as <<- Neq_as * (1-U_as) # age/sex structured escapement
+  sum(Neq_as)
+}
