@@ -168,6 +168,32 @@ nass_sex_age_comps <- nass_age_length_raw |>
          prop_count = (n/year_total)*100) |>
   select(Year, age, Sex, prop_count)
 
+nass_fem_age_comps <- nass_sex_age_comps |>
+  mutate(prop = prop_count/100) |>
+  filter(Sex == "F") |>
+  select(Year, Sex, age,prop) |>
+  pivot_wider(names_from = age,
+              values_from = prop) 
+  
+write.csv(nass_fem_age_comps, here("data/Nass_fem_age_comps.csv"),row.names = FALSE)
+
+nass_male_age_comps <- nass_sex_age_comps |>
+  mutate(prop = prop_count/100) |>
+  filter(Sex == "M") |>
+  select(Year, Sex, age,prop) |>
+  pivot_wider(names_from = age,
+              values_from = prop) 
+
+write.csv(nass_fem_age_comps, here("data/Nass_male_age_comps.csv"),row.names = FALSE)
+
+nass_fem_age_egg_mass <- nas_fem_avg_len |>
+  select(Year, age, egg_mass) |>
+  pivot_wider(names_from = age,
+              values_from = egg_mass) 
+
+write.csv(nass_fem_age_egg_mass, here("data/Nass_fem_age_eggg_mass.csv"),row.names = FALSE)
+
+
 nass_sex_ratio <- nass_sex_age_comps |>
   group_by(Year, Sex) |>
   summarize(ratio = sum(prop_count))

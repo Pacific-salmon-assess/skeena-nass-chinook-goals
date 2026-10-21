@@ -94,13 +94,21 @@ ggplot(lower_escapement, aes(x = year, y = `50%`)) +
   geom_ribbon(aes(ymin = `5%`, ymax = `95%`), fill = "light grey") +
   geom_line(size=1.5, color="grey30")+
   xlab("Year") +
+  geom_line(aes(y=spwn),size=1, color="black", lty=2) +
   ylab("Lower Nass reconstructed spawner abundance") +
   theme_sleek()
 ggsave("plots/nass/lowerCU-reconstruction-infill.jpeg",width=7,height=5)
 
 
+ggplot(df |> pivot_longer(cols=c(Ishkeenickh:Upper_Nass),
+                          names_to = "Tributary",
+                          values_to = "Spawners"), aes(x = year, y = Spawners)) +
+  geom_line(size=1, color="grey30")+
+  facet_wrap(~Tributary, scales = "free_y") +
+  xlab("Year") +
+  theme_sleek()
+ggsave("plots/nass/lowerCU-tribs.jpeg",width=7,height=5)
 
-  
   
 Iknouk_cont = rbeta(10000,0.9324756, 7.7788844)
 a <- ggplot(data.frame(x = Iknouk_cont), aes(x = Iknouk_cont)) +

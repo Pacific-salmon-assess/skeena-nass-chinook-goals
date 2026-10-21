@@ -57,6 +57,26 @@ kitsumkalum_sex_age_comps <- kitsumkalum_ASL |>
          prop_count = (n/year_total)*100) |>
   select(Year, age, Sex, prop_count)
 
+kitsumkalum_fem_age_comps <- kitsumkalum_sex_age_comps |>
+  mutate(prop = prop_count/100) |>
+  filter(Sex == "f") |>
+  select(Year, Sex, age, prop) |>
+  pivot_wider(names_from = age,
+              values_from = prop) |>
+  mutate(`4` = replace_na(`4`, 0))
+
+write.csv(kitsumkalum_fem_age_comps, here("data/Kitsum_fem_age_comps.csv"),row.names = FALSE)
+
+kitsumkalum_male_age_comps <- kitsumkalum_sex_age_comps |>
+  mutate(prop = prop_count/100) |>
+  filter(Sex == "m") |>
+  select(Year, Sex, age, prop) |>
+  pivot_wider(names_from = age,
+              values_from = prop) |>
+  mutate(`4` = replace_na(`4`, 0))
+
+write.csv(kitsumkalum_male_age_comps, here("data/Kitsum_male_age_comps.csv"),row.names = FALSE)
+
 kitsumkalum_sex_ratio <- kitsumkalum_sex_age_comps |>
   group_by(Year, Sex) |>
   summarize(ratio = sum(prop_count))
@@ -77,6 +97,17 @@ kitsumkalum_fem_avg_len <- kitsumkalum_ASL_infill|>
   summarise(mean_length = mean(MEF, na.rm = T)) |>
   mutate(fecundity = 9.35e-4*(mean_length*10)^2.36, #coefficients from elsewhere (from BC)
          egg_mass = 8.71e-12*(mean_length*10)^4.83) 
+
+kitsumkalum_fem_age_egg_mass <- kitsumkalum_fem_avg_len |>
+  select(Year, age, egg_mass) |>
+  pivot_wider(names_from = age,
+              values_from = egg_mass) |>
+  ungroup() |>
+  mutate(`4` = replace_na(`4`, mean(`4`, na.rm = TRUE))) |>
+  mutate(`6` = replace_na(`6`, mean(`6`, na.rm = TRUE))) |>
+  select(Year,`4`, `5`, `6`)
+
+write.csv(kitsumkalum_fem_age_egg_mass, here("data/Kitsum_fem_age_egg_mass.csv"),row.names = FALSE)
 
 kitsumkalum_repro_potential <- kitsumkalum_sex_age_comps |>
   filter(Sex == "f") |>
