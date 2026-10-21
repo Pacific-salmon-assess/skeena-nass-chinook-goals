@@ -708,13 +708,13 @@ ggplot(IWAM_S_max_plot_data, aes(value/1000, color = par, fill = par)) +
   geom_density(alpha = 0.5) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "S_max (000s)") +
-  theme(axis.ticks.y = element_blank(),
-        axis.text.y = element_blank(),
-        legend.title=element_blank(), 
-        legend.position = "bottom") +
   scale_fill_viridis_d() +
   scale_color_viridis_d() +
-  theme_sleek()
+  theme_sleek() +
+  theme(axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
 ```
 
 Then we'll simply compare $S_{Max}$ posteriors: 
