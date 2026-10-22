@@ -155,10 +155,9 @@ for(i in unique(sp_har$CU)){
 }
 ```
 
+# $S_{Max}$ prior  
 
-# "Semi-informative" $S_{Max}$ prior  
-
-We used a prior for $S_{Max}$ that was a normal distribution with a mean of half of the maximum observed spawners, with a standard deviaiton of 1.5 times the maximum observed spawners in a given CU. This restricted the $S_{Max}$ paramater space to a distribution that was "biologically reasonable" for the observed data.  
+We used a prior for $S_{Max}$ that was a normal distribution with a mean 75% of the maximum observed spawners, with a standard deviation of 1.5 times the maximum observed spawners in a given CU. This restricted the $S_{Max}$ parameter space to a distribution that was "biologically reasonable" for the observed data.  
 
 ```{r Smax prior-posterior}
 S_max_plot_data <- NULL
@@ -176,8 +175,10 @@ for(i in unique(sp_har$CU)){
                                       posterior = sub_AR1_pars$S_max))
 }
 
+S_max_plot_data <- S_max_plot_data |>
+  pivot_longer(-CU, names_to = "par")
 #functionally make prior half normal - this is OK - prior is generated above and illustrative.
-S_max_plot_data <- filter(S_max_plot_data, !(par== "prior" & value <=0))
+S_max_plot_data <- filter(S_max_plot_data, !(par == "prior" & value <=0))
 
 ggplot(S_max_plot_data, aes(value/1000, color = par, fill = par)) +
   geom_density(alpha = 0.5) +
