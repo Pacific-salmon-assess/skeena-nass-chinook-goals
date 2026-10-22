@@ -43,7 +43,7 @@ ggplot(skeena_ASL, aes(x = Year, y = hypural_length_mm)) +
   geom_smooth(method = "lm", level = 0.95, color = "dark grey", fill = "lightblue") +
   theme_sleek()
 
-# process data for multipanel plot -------------------------------------------------------
+# process data for kitsumkalum multipanel plot -------------------------------------------------------
 kitsumkalum_ASL <- skeena_ASL |>
   filter(CU == "Kitsumkalum", 
          age %in% c(4,5,6), 
@@ -140,7 +140,7 @@ b <- ggplot(kitsumkalum_ASL_infill |> filter(Sex == "f"), aes(x = Year, y = MEF)
   theme_sleek()+
   theme(plot.margin = margin(20,10,0.5,10))
 
-c <- ggplot(kitsumkalum_ASL, aes(x = Year, fill = as.factor(age))) +
+c <- ggplot(kitsumkalum_ASL|> filter(Sex == "f"), aes(x = Year, fill = as.factor(age))) +
   geom_bar(position = "fill") +
   scale_y_continuous(labels = scales::percent) +
   scale_fill_brewer(palette = "Dark2") +
@@ -162,4 +162,125 @@ g <- ggarrange(a,b,c,d,
                labels = c("a", "b","c", "d"),
                heights = c(1,1))
 g
-my.ggsave(here("plots/Skeena/repro-potential.PNG"))
+my.ggsave(here("plots/Skeena/kitsum-repro-potential.PNG"))
+
+
+
+# process data for skeena aggregate multipanel plot -------------------------------------------------------
+aggregate_ASL <- skeena_ASL |>
+  filter(age %in% c(4,5,6), 
+         Sex != "u") 
+
+aggregate_sex_age_comps <- aggregate_ASL |>
+  count(Year, Sex, age) |>
+  group_by(Year) |>
+  mutate(year_total = sum(n),
+         prop_count = (n/year_total)*100) |>
+  select(Year, age, Sex, prop_count)
+
+aggregate_fem_age_comps <- aggregate_sex_age_comps |>
+  mutate(prop = prop_count/100) |>
+  filter(Sex == "f") |>
+  select(Year, Sex, age, prop) |>
+  pivot_wider(names_from = age,
+              values_from = prop) |>
+  mutate(`4` = replace_na(`4`, 0))
+
+write.csv(aggregate_fem_age_comps, here("data/Agg_fem_age_comps.csv"),row.names = FALSE)
+
+aggregate_male_age_comps <- aggregate_sex_age_comps |>
+  mutate(prop = prop_count/100) |>
+  filter(Sex == "m") |>
+  select(Year, Sex, age, prop) |>
+  pivot_wider(names_from = age,
+              values_from = prop) |>
+  mutate(`4` = replace_na(`4`, 0))
+
+write.csv(aggregate_male_age_comps, here("data/Agg_male_age_comps.csv"),row.names = FALSE)
+
+aggregate_sex_ratio <- aggregate_sex_age_comps |>
+  group_by(Year, Sex) |>
+  summarize(ratio = sum(prop_count))
+
+# wrangle avg fecundity ---
+plot(filter(aggregate_ASL, Sex== "f")$nose_fork_length_mm ~ filter(aggregate_ASL, Sex== "f")$hypural_length_mm)
+lm(filter(aggregate_ASL, Sex== "f")$nose_fork_length_mm ~ filter(aggregate_ASL, Sex== "f")$hypural_length_mm)
+
+aggregate_ASL_infill <- aggregate_ASL |>
+  filter(Sex == "f") |>
+  # Convert hypural length to nose fork length
+  mutate(nose_fork_length_mm = ifelse(is.na(nose_fork_length_mm), (23.04 + hypural_length_mm*1.19), 
+                                      nose_fork_length_mm), 
+         MEF = 2.225 + (nose_fork_length_mm/10)* 0.8907) #then convert NFL (in cms) to MEF
+
+aggregate_fem_avg_len <- aggregate_ASL_infill|>
+  group_by(Year, age) |>
+  summarise(mean_length = mean(MEF, na.rm = T)) |>
+  mutate(fecundity = 9.35e-4*(mean_length*10)^2.36, #coefficients from elsewhere (from BC)
+         egg_mass = 8.71e-12*(mean_length*10)^4.83) 
+
+aggregate_fem_age_egg_mass <- aggregate_fem_avg_len |>
+  select(Year, age, egg_mass) |>
+  pivot_wider(names_from = age,
+              values_from = egg_mass) |>
+  ungroup() |>
+  mutate(`4` = replace_na(`4`, mean(`4`, na.rm = TRUE))) |>
+  mutate(`6` = replace_na(`6`, mean(`6`, na.rm = TRUE))) |>
+  select(Year,`4`, `5`, `6`)
+
+write.csv(aggregate_fem_age_egg_mass, here("data/Agg_fem_age_egg_mass.csv"),row.names = FALSE)
+
+aggregate_repro_potential <- aggregate_sex_age_comps |>
+  filter(Sex == "f") |>
+  left_join(aggregate_fem_avg_len, by=c("Year", "age")) |>
+  mutate(sex_cor_fecundity = (prop_count/100)*fecundity, 
+         sex_cor_egg_mass = (prop_count/100)*egg_mass) |>
+  group_by(Year) |>
+  summarize(eggsperspwn = sum(sex_cor_fecundity),
+            eggmassperspwn = sum(sex_cor_egg_mass))
+
+a <- ggplot(aggregate_sex_ratio, aes(x = Year, y= ratio/100, fill= as.factor(Sex))) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_sleek() +
+  ylab("Spawners of given sex") + 
+  labs(fill = "Sex") +
+  theme(legend.position = "top")
+
+b <- ggplot(aggregate_ASL_infill |> filter(Sex == "f"), aes(x = Year, y = MEF)) +
+  stat_summary(fun = mean, geom = "point", size = 2, col="dark grey") + # Add points for the mean
+  stat_summary(fun.data = mean_cl_boot, # Calculate mean and standard error
+               geom = "errorbar",
+               width = 0, # Control the width of the error bar whiskers
+               col="dark grey") +
+  labs(x = "Year", y = "Female length (MEF; mm)") +
+  scale_x_continuous(n.breaks = 3) +
+  facet_wrap(~age) +
+  geom_smooth(method = "lm", level = 0.99, color = "dark grey", fill = "lightblue") +
+  theme_sleek()+
+  theme(plot.margin = margin(20,10,0.5,10))
+
+c <- ggplot(aggregate_ASL|> filter(Sex == "f"), aes(x = Year, fill = as.factor(age))) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_brewer(palette = "Dark2") +
+  theme_sleek() +
+  ylab("Female age composition") + 
+  labs(fill = "Age") +
+  theme(legend.position = "top")
+
+d <- ggplot(aggregate_repro_potential, aes(x = Year, y = eggsperspwn)) +
+  geom_smooth(method="lm", color="grey", fill = "lightblue") +
+  geom_point(size=2, color="dark grey")+
+  xlab("Year") +
+  ylab("Average reproductive output \n (total eggs per spawner)") +
+  theme_sleek() +
+  theme(plot.margin = margin(40,10,0.5,0.5))
+
+
+g <- ggarrange(a,b,c,d,
+               labels = c("a", "b","c", "d"),
+               heights = c(1,1))
+g
+my.ggsave(here("plots/Skeena/Agg-repro-potential.PNG"))
