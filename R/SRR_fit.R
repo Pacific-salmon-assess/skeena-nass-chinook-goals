@@ -197,3 +197,44 @@ check_divergences(EM.fit)
 
 saveRDS(EM.fit, here("data/generated/model_fits/EM",
                      paste0(i, "_EM.rds")))
+
+i = "Skeena Aggregate"
+
+sp_har1 <- filter(sp_har, CU == i)
+
+yrs1 <- filter(yrs, CU == i)
+
+A_obs1 <- select(sp_har1, a4:a6) |>
+  as.matrix()
+
+fem_S_comps <- read.csv(here("data/Agg_fem_age_comps.csv")) |> # female age comps
+  select(X4, X5, X6)
+
+fem_egg_mass_comps <- read.csv(here("data/Agg_fem_age_egg_mass.csv")) |> # average female egg mass by  age
+  select(X4, X5, X6)
+
+stan.data <- list("nyrs" = yrs1$nyrs,
+                  "a_min" = a_min,
+                  "a_max" = a_max,
+                  "A" = A,
+                  "nRyrs" = yrs1$nRyrs,
+                  "A_obs" = A_obs1,
+                  "S_obs" = sp_har1$spwn,
+                  "H_obs" = sp_har1$harv,
+                  "S_cv" = sp_har1$spwn_cv,
+                  "H_cv" = sp_har1$harv_cv,
+                  "fem_S_comps"=fem_S_comps,
+                  "fem_egg_mass_comps"=fem_egg_mass_comps) 
+
+EM.fit <- stan(file = here("Stan/SS-SR-AR1-EM.stan"),
+               data = stan.data,
+               seed = 1,
+               iter = 4000,
+               refresh = 0, #hide long list of timing updates
+               control = list(adapt_delta = 0.995,
+                              max_treedepth = 20))
+
+check_divergences(EM.fit)
+
+saveRDS(EM.fit, here("data/generated/model_fits/EM",
+                     paste0(i, "_EM.rds")))
