@@ -81,37 +81,6 @@ ggplot(aes(year, value, fill = age)) +
   labs(x = "Return year", y = "Proportion-at-age", fill = "Age")
 ```
 
-## Priors  
-
-Here, we look specifically at the $S_{Max}$ prior, as some may consider it "informative".
-This prior is a normal distribution with a mean of half the maximum observed spawners, and a standard deviation of 1.5 times the maximum observed spawners.  
-
-```{r Smax_prior}
-S_max_plot_data <- sp_har |>
-  filter(SMU == "Skeena") |>
-  group_by(CU) |>
-  reframe(rnorm(nrow(filter(par.posts, SMU == "Skeena"))/length(unique(filter(sp_har, SMU == "Skeena")$CU)), 
-                  max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
-  cbind(filter(par.posts, SMU == "Skeena")$S_max) 
-  
-colnames(S_max_plot_data) <- c("CU", "prior", "posterior")
-
-S_max_plot_data <- S_max_plot_data |>
-  pivot_longer(-CU, names_to = "par")|>
-  filter(value>0) |>
-  group_by(CU) |>
-  filter(value < quantile(value, 0.99))
-
-ggplot(S_max_plot_data, aes(value/1000)) +
-  geom_density(aes(fill = par, color = par), alpha = 0.5) +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
-  facet_wrap(~factor(CU, levels = skeena_order), scales = "free") +
-  labs(x = "S_Max (000s)", fill = "", color = "") +
-  theme_sleek()
-
-```
-
 ## Spawner-recruit fits 
 
 ```{r static fit}
@@ -406,37 +375,6 @@ ggplot(aes(year, value, fill = age)) +
   labs(x = "Return year", y = "Proportion-at-age", fill = "Age")
 ```
 
-## Priors  
-
-Here, we look specifically at the $S_{Max}$ prior, as some may consider it "informative".
-This prior is a normal distribution with a mean of half the maximum observed spawners, and a standard deviation of 1.5 times the maximum observed spawners.  
-
-```{r Smax_prior nass}
-S_max_plot_data <- sp_har |>
-  filter(SMU == "Nass") |>
-  group_by(CU) |>
-  reframe(rnorm(nrow(filter(par.posts, SMU == "Nass"))/length(unique(filter(sp_har, SMU == "Nass")$CU)), 
-                  max(spwn)*.5, max(spwn)*1.5)) |> #needs to match prior in stan model
-  cbind(filter(par.posts, SMU == "Nass")$S_max) 
-  
-colnames(S_max_plot_data) <- c("CU", "prior", "posterior")
-
-S_max_plot_data <- S_max_plot_data |>
-  pivot_longer(-CU, names_to = "par")|>
-  filter(value>0) |>
-  group_by(CU) |>
-  filter(value < quantile(value, 0.99))
-
-ggplot(S_max_plot_data, aes(value/1000)) +
-  geom_density(aes(fill = par, color = par), alpha = 0.5) +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
-  facet_wrap(~factor(CU, levels = nass_order), scales = "free") +
-  labs(x = "S_Max (000s)", fill = "", color = "") +
-  theme_sleek()
-
-```
-
 ## Spawner-recruit fits 
 
 ```{r static fit nass}
@@ -687,14 +625,100 @@ cowplot::plot_grid(a, b, labels = "auto", ncol = 1, rel_heights = c(0.6,1))
 
 Here we compare the above AR1 model to the same model fit with an informative $S_{Max}$ prior based on an estimate Integrated Watershed Area Model (IWAM) developed by *people...* and adapted to this system by Mairin.  
 
-First we'll simply compare $S_{Max}$ posteriors: 
+To check if this new prior is restricting the exploration of parameter space, we'll plot the prior and posterior:
+
+```{r IWAM prior-post compare}
+S_max_IWAM <- NULL
+for(i in unique(IWAM_priors$CU)){
+  sub_IWAM_post <- filter(IWAM.bench.posts, CU == i)
+  S_max_IWAM <- rbind(S_max_IWAM, 
+                           data_frame(CU = rep(i, nrow(sub_IWAM_post)), 
+                                      IWAM_prior = rnorm(nrow(sub_IWAM_post), 
+                                                    filter(IWAM_priors, CU == i)$SMAX_mean,
+                                                    filter(IWAM_priors, CU == i)$sd),
+                                      IWAM_posterior = sub_IWAM_post$Smsr))
+}
+
+S_max_IWAM <- S_max_IWAM |>
+  pivot_longer(-CU, names_to = "par")
+
+S_max_AR1 <- NULL
+for(i in unique(sp_har$CU)){
+  sub_dat <- filter(sp_har, CU==i)
+  sub_pars <- filter(bench.posts, CU ==i) #bench
+  
+  S_max_AR1 <- rbind(S_max_AR1, 
+                           data_frame(CU = rep(i, nrow(sub_pars)), 
+                                      AR1_prior = rnorm(nrow(sub_pars), 
+                                                    max(sub_dat$spwn)*0.5, #values used for prior
+                                                    max(sub_dat$spwn)*2), 
+                                      AR1_posterior = sub_pars$Smsr))
+}
+
+IWAM_S_max_compare <- S_max_AR1 |>
+  pivot_longer(-CU, names_to = "par") |>
+  bind_rows(S_max_IWAM) |> 
+  left_join(CU_SMU, by = "CU") |>
+  filter(!(par %in% c("IWAM_prior", "AR1_prior") & value < 0), 
+         !(CU %in% c("Nass Aggregate", "Skeena Aggregate")))
+  
+
+smu <- "Skeena" #toggle to run
+  
+ggplot(filter(IWAM_S_max_compare, par == "IWAM_prior", SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_max (000s)") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
+
+ggplot(filter(IWAM_S_max_compare, par %in% c("IWAM_prior", "AR1_prior"), SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_max (000s)") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
+
+ggplot(filter(IWAM_S_max_compare, par %in% c("IWAM_prior", "AR1_prior", "IWAM_posterior"), 
+               SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_max (000s)") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
+
+ggplot(filter(IWAM_S_max_compare, SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_max (000s)") +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  theme_sleek() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
+```
+
+Then we'll simply compare $S_{Max}$ posteriors: 
 
 ```{r IWAM posterior compare}
-IWAM.post.compare <- bench.posts |>
-  filter(CU %in% IWAM_priors$CU) |>
-  mutate(fit = "AR1") |>
-  bind_rows(IWAM.bench.posts) |>
-  mutate(fit = replace_na(fit, "IWAM-AR1"))
+
 
 ggplot(IWAM.post.compare, aes(Smsr/1000)) +
     geom_density(aes(fill = fit, color = fit), alpha = 0.5) +
@@ -722,17 +746,9 @@ ggplot() +
   geom_ribbon(data = IWAM.SR.compare, 
               aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000, 
                   fill = fit,  colour=fit), alpha=0.5, linetype=2) +
-  #geom_errorbar(data = filter(brood.all, SMU == "Skeena"), 
-  #              aes(x= S_med/1000, y = R_med/1000, ymin = R_lwr/1000, ymax = R_upr/1000),
-  #              colour="grey", width=0, linewidth=0.3) +
-  #geom_errorbar(data = filter(brood.all, SMU == "Skeena"), 
-  #               aes(y = R_med/1000, xmin = S_lwr/1000, xmax = S_upr/1000),
-  #               height=0, colour = "grey", linewidth = 0.3) +
-  #geom_point(data = filter(brood.all, SMU == "Skeena"),
-  #           aes(x = S_med/1000, y = R_med/1000, color=BroodYear), size = 1.5) +
   geom_line(data = IWAM.SR.compare, 
             aes(x = Spawn/1000, y = Rec_med/1000, colour = fit)) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "Spawners (000s)", y = "Recruits (000s)") +
-  theme_sleek()
+  theme_sleek() 
 ```

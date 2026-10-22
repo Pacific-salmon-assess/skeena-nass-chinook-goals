@@ -112,7 +112,7 @@ model{
   ln_alpha0 ~ normal(1,4);
   alpha_dev ~ std_normal();                    //standardized (z-scales) deviances
   sigma_alpha ~ normal(0,1);
-  S_max ~ normal(prior_S_max*0.5, prior_S_max*1.5); 
+  S_max ~ normal(prior_S_max*0.5, prior_S_max*2); 
   sigma_R ~ normal(0,2);
   lnresid_0 ~ normal(0,20);
   mean_ln_R0 ~ normal(0,20);

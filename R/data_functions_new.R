@@ -4,27 +4,11 @@ library(devtools) #comment out below if you need to install skrunchy
 #install_github("Pacific-salmon-assess/skrunchy")
 #install_github("lukewarkentin/skrunchy2025")
 library(skrunchy2025)
-load(here("data/run_reconstruction_table_summary_with_uncertainty.rda")) # hack for now - figure out how to read in from pkg like below
 
 # Skeena ---------------------------------------------------------------------------------
 # read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO)'s package
   #and Nass data from Ian Beveridge & Richard Alexander (LGL)
-if(FALSE){ ##FIX THIS! 
-  sp_har <- skrunchy2025::run_reconstruction_table|> ## get new name from Luke
-    ##select CVs 
-    select(i_population, y_return_year, W_star_wild_spawners, total_harvest_estimate) |>
-    rename(CU = i_population, 
-           year = y_return_year) |>
-    group_by(CU, year) |>
-    summarise(spwn = round(sum(W_star_wild_spawners, na.rm = TRUE)), #sum across ages
-              harv = round(sum(total_harvest_estimate, na.rm = TRUE))) |>
-    mutate(SMU = "Skeena", 
-           CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
-    arrange(CU, year) |>
-    as.data.frame()
-}
-
-sp_har <- run_reconstruction_table_summary_with_uncertainty |>
+sp_har <- skrunchy2025::run_reconstruction_table_summary_with_uncertainty |>
   filter(variable %in% c("W_wild_spawners", "harvest")) |> ##LUKE - ARE THESE RIGHT?
   rename(year = y_return_year, 
          CU = i_population) |>
@@ -76,10 +60,13 @@ hist(ESS_Skeena$ESS)
 
 ESS_Skeena <- ESS_Skeena |>
   mutate(ESS_scaled = ESS/max(filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS)*100) |> #WITHOUT aggregate
-  mutate( ESS_scaled = ifelse(CU== "Skeena Aggregate", 100, ESS_scaled), 
+  mutate(ESS_scaled = ifelse(CU== "Skeena Aggregate", #put aggregate on its own scale... 
+                             ESS/max(filter(ESS_Skeena, CU == "Skeena Aggregate")$ESS)*100, 
+                             ESS_scaled), 
           ESS_scaled = ifelse(ESS_scaled < 10, 10, ESS_scaled))
 
-hist(ESS_Skeena$ESS_scaled) #gross
+hist((filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS_scaled)) #gross
+hist(filter(ESS_Skeena, CU == "Skeena Aggregate")$ESS_scaled)
 
 A_obs <- A_obs |>
   left_join(ESS_Skeena, by = c("CU", "year")) |>
