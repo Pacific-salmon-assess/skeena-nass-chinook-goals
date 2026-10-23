@@ -2,7 +2,7 @@ library(tidyverse)
 library(here)
 library(rstan)
 
-source(here("R/data_functions_new.R")) #try with informed A-obs
+source(here("R/data_functions.R")) #try with informed A-obs
 
 #refit <- FALSE #toggle T/F if you want to refit models
 refit <- TRUE

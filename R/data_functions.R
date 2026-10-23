@@ -1,15 +1,15 @@
 library(tidyverse)
 library(here)
-#library(devtools) #comment out below if you need to install skrunchy
+library(devtools) #comment out below if you need to install skrunchy
 #install_github("Pacific-salmon-assess/skrunchy")
 #install_github("lukewarkentin/skrunchy2025")
 library(skrunchy2025)
 
-#-----------------------------------------------------------------------------------------
+# Skeena ---------------------------------------------------------------------------------
 # read in data for SRR fit. Skeena data comes from Luke Warkentin (DFO)'s package
   #and Nass data from Ian Beveridge & Richard Alexander (LGL)
 sp_har <- skrunchy2025::run_reconstruction_table_summary_with_uncertainty |>
-  filter(variable %in% c("W_wild_spawners", "harvest")) |> 
+  filter(variable %in% c("W_wild_spawners", "harvest")) |> ##LUKE - ARE THESE RIGHT?
   rename(year = y_return_year, 
          CU = i_population) |>
   mutate(cv = ifelse(cv == 0, 0.2, cv), 
@@ -26,13 +26,13 @@ colnames(sp_har) <- c("SMU", "CU", "year", "spwn", "harv", "spwn_cv", "harv_cv")
 
 A_obs <- NULL #empty object to bind to
 for(i in 1:dim(skrunchy2025::n_age_observations)[1]){
-  a_obs <- as.data.frame(skrunchy2025::omega$omega[i,,]) |>
+  a_obs <- as.data.frame(skrunchy2025::omega$omega[i,,]) |> 
     mutate(CU = dimnames(skrunchy2025::omega$omega)$i[i])
   a_obs <- mutate(a_obs, year = rownames(a_obs))
   A_obs <- bind_rows(A_obs, a_obs)
 }
  
-## do I want to do RAW a_obs? - get from luke
+## do I want to do RAW a_obs? - get from luke? these are currently proportions, then I calculate numbers based on ESS
 A_obs <- A_obs |>
   mutate(`6` = `6` +`7`) |>
   rename(a4 = `4`, 
@@ -41,37 +41,47 @@ A_obs <- A_obs |>
   select(CU, year, a4, a5, a6) |>
   arrange(CU, year) |>
   mutate(SMU = "Skeena", 
-         a4 = a4*100, #* all by 100 to have a 100 fish balanced sample size for now 
-         a5 = a5*100, 
-         a6 = a6*100, 
          year = as.numeric(year), 
          CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU))
 
-  rownames(A_obs) <- NULL
+rownames(A_obs) <- NULL
   
-#was looking at this to get raw A_obs - seems janky
-  if(FALSE){ #NEED TO FIX THIS LATER - IT'S DROPPING AGES
-    # correct Skeena for uneven ESS - STILL NEED TO DO FOR NASS! 
-    ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + skrunchy2025::n_age_observations[,,2] + skrunchy2025::n_age_observations[,,2]) |>
-      as.data.frame() |>
-      mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
-      pivot_longer(-year, names_to = "CU") |>
-      rename(ESS = value)
-    
-    A_obs <- A_obs |>
-      left_join(ESS_Skeena, by = c("CU", "year")) |>
-      mutate(a4 = (a4/100)*ESS, #revet fromm scaled to 100 to calculated ESS. 
-             a5 = (a5/100)*ESS, 
-             a6 = (a6/100)*ESS) |>
-      select(-ESS)
-  }
+ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + #add the 3 age cohorts together
+                  skrunchy2025::n_age_observations[,,2] + 
+                  skrunchy2025::n_age_observations[,,3]) |>
+  as.data.frame() |>
+  mutate(year = as.numeric(rownames(t(skrunchy2025::n_age_observations[,,1])))) |>
+  pivot_longer(-year, names_to = "CU") |>
+  rename(ESS = value) |>
+  mutate(CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
+  arrange(year, CU, ESS)
 
+hist(ESS_Skeena$ESS)
+
+ESS_Skeena <- ESS_Skeena |>
+  mutate(ESS_scaled = ESS/max(filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS)*100) |> #WITHOUT aggregate
+  mutate(ESS_scaled = ifelse(CU== "Skeena Aggregate", #put aggregate on its own scale... 
+                             ESS/max(filter(ESS_Skeena, CU == "Skeena Aggregate")$ESS)*100, 
+                             ESS_scaled), 
+          ESS_scaled = ifelse(ESS_scaled < 10, 10, ESS_scaled))
+
+hist((filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS_scaled)) #gross
+hist(filter(ESS_Skeena, CU == "Skeena Aggregate")$ESS_scaled)
+
+A_obs <- A_obs |>
+  left_join(ESS_Skeena, by = c("CU", "year")) |>
+  mutate_at(3:5, ~.x*ESS_scaled) |>
+  mutate_if(is.numeric, round) |>
+  mutate_at(3:5, ~ replace(.x, .x == 0, 1)) |> #replace 0 with 1 so stan can still estimate #s at age
+  select(-ESS, -ESS_scaled)
+  
+# nass -----------------------------------------------------------------------------------
 # read in Nass data - this data was processed by copy & pasting LGL's data and calculating 
   # new vars (i.e. combining age groups and calc'ing harvest) all in excel as a placeholder
 
 # age data is aggregate for nass - no CU level data
-nass_A_obs <- read.csv(here("data/Nass_Aobs_16Feb2026.csv"))# |> #THESE are PROPS scaled to 100 at age - where's the raw? 
-  #mutate(sum = a4+a5+a6)
+nass_A_obs <- read.csv(here("data/Nass_Aobs_19Oct2026.csv")) |>
+  select(-ESS_scaled)
 
 #make dataset long and add CU names since they are shared among all CUs - this will be an important consideration for modelling
   #hacky fix so it lines up for how skeena code is written
@@ -85,7 +95,7 @@ nass_A_obs <- bind_rows(nass_A_obs, nass_A_obs, nass_A_obs) |>
 nass_sp_har <- read.csv(here("data/Nass_SpHar_3June2026.csv")) |>
   select(-X)
 
-#bind skeena and nass
+#bind skeena and nass --------------------------------------------------------------------
 prop_age <- bind_rows(A_obs, nass_A_obs) |> #for plotting later
   mutate(a4 = a4/100, 
          a5 = a5/100, 
@@ -147,7 +157,7 @@ IWAM_priors <- filter(IWAM, CU %in% c("Kalum-Late Timing",
                                       "Upper Nass", 
                                       "Upper Skeena", 
                                       "Zymoetz"))
-
+IWAM_priors$CU #check existing names
 IWAM_priors$CU <- c("Kitsumkalum", "Lower Skeena", "Large Lakes", "Middle Skeena", "Lower Nass", 
                     "Upper Nass", "Upper Skeena", "Zymoetz") #rename to match sp_har
 
@@ -255,33 +265,4 @@ process.iteration = function(samp) {
   )
   # 4.) return output
   return(output)
-}
-
-#------------------------------------------------------------------------------#
-# functions to estimate spawners associated with maximum yield or recruits,
-#   based on yield per recruit under fishing mortality Fmax under a give age/sex
-#   class-specific reproductive output, and  probability of returning by age/sex
-#------------------------------------------------------------------------------#
-calcCeq <- function(Fmax)
-{
-  U_as <- 1-exp(-Fmax) # assume all ages/sexes equally vulnerable sp set v_as = 1
-  reproOutputPerSpawner <- sum((1-U_as)*z_as*eta_as)
-  alpha <- exp(ln_a)
-  Req <- log(alpha*reproOutputPerSpawner) / (beta*reproOutputPerSpawner)# equilibrium population fished at Fmax
-  Neq_as <- Req * eta_as # age/sex structured abundance
-  Ceq_as <- Neq_as * U_as # age/sex structured harvest
-  Seq_as <<- Neq_as * (1-U_as) # age/sex structured escapement
-  sum(Ceq_as)
-}
-
-calcNeq <- function(Fmax)
-{
-  U_as <- 1-exp(-Fmax) # assume all ages/sexes equally vulnerable sp set v_as = 1
-  reproOutputPerSpawner <- sum((1-U_as)*z_as*eta_as)
-  alpha <- exp(ln_a)
-  Req <- log(alpha*reproOutputPerSpawner) / (beta*reproOutputPerSpawner)# equilibrium population fished at Fmax
-  Neq_as <- Req * eta_as # age/sex structured abundance
-  Ceq_as <- Neq_as * U_as # age/sex structured harvest
-  Seq_as <<- Neq_as * (1-U_as) # age/sex structured escapement
-  sum(Neq_as)
 }
