@@ -56,7 +56,7 @@ ESS_Skeena <- t(skrunchy2025::n_age_observations[,,1] + #add the 3 age cohorts t
   mutate(CU = ifelse(CU == "Skeena", "Skeena Aggregate", CU)) |>
   arrange(year, CU, ESS)
 
-hist(ESS_Skeena$ESS)
+#hist(ESS_Skeena$ESS) #need to keep these off so they dont cascade into .Rmd docs they are source()'d in
 
 ESS_Skeena <- ESS_Skeena |>
   mutate(ESS_scaled = ESS/max(filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS)*100) |> #WITHOUT aggregate
@@ -65,8 +65,8 @@ ESS_Skeena <- ESS_Skeena |>
                              ESS_scaled), 
           ESS_scaled = ifelse(ESS_scaled < 10, 10, ESS_scaled))
 
-hist((filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS_scaled)) #gross
-hist(filter(ESS_Skeena, CU == "Skeena Aggregate")$ESS_scaled)
+#hist((filter(ESS_Skeena, CU != "Skeena Aggregate")$ESS_scaled)) #gross
+#hist(filter(ESS_Skeena, CU == "Skeena Aggregate")$ESS_scaled)
 
 A_obs <- A_obs |>
   left_join(ESS_Skeena, by = c("CU", "year")) |>
