@@ -633,10 +633,10 @@ for(i in unique(IWAM_priors$CU)){
   sub_IWAM_post <- filter(IWAM.bench.posts, CU == i)
   S_max_IWAM <- rbind(S_max_IWAM, 
                            data_frame(CU = rep(i, nrow(sub_IWAM_post)), 
-                                      IWAM_prior = rnorm(nrow(sub_IWAM_post), 
+                                      'IWAM prior' = rnorm(nrow(sub_IWAM_post), 
                                                     filter(IWAM_priors, CU == i)$SMAX_mean,
                                                     filter(IWAM_priors, CU == i)$sd),
-                                      IWAM_posterior = sub_IWAM_post$Smsr))
+                                      'IWAM posterior' = sub_IWAM_post$Smsr))
 }
 
 S_max_IWAM <- S_max_IWAM |>
@@ -649,86 +649,117 @@ for(i in unique(sp_har$CU)){
   
   S_max_AR1 <- rbind(S_max_AR1, 
                            data_frame(CU = rep(i, nrow(sub_pars)), 
-                                      AR1_prior = rnorm(nrow(sub_pars), 
+                                      'AR1 prior' = rnorm(nrow(sub_pars), 
                                                     max(sub_dat$spwn)*0.5, #values used for prior
                                                     max(sub_dat$spwn)*2), 
-                                      AR1_posterior = sub_pars$Smsr))
+                                      'AR1 posterior' = sub_pars$Smsr))
 }
 
 IWAM_S_max_compare <- S_max_AR1 |>
   pivot_longer(-CU, names_to = "par") |>
   bind_rows(S_max_IWAM) |> 
   left_join(CU_SMU, by = "CU") |>
-  filter(!(par %in% c("IWAM_prior", "AR1_prior") & value < 0), 
+  filter(!(par %in% c("IWAM prior", "AR1 prior") & value < 0), 
          !(CU %in% c("Nass Aggregate", "Skeena Aggregate")))
-  
 
 smu <- "Skeena" #toggle to run
+ 
+
+for(smu in unique(IWAM_S_max_compare$SMU)){
+
+  cat('\n')
+  cat("### ", smu, "\n")
   
-ggplot(filter(IWAM_S_max_compare, par == "IWAM_prior", SMU == smu), aes(value/1000, color = par, fill = par)) +
-  geom_density(alpha = 0.5) +
+meds <- IWAM_S_max_compare %>%
+  filter(SMU == smu, par %in% c("IWAM posterior", "AR1 posterior")) %>%
+  group_by(CU, par) %>%
+  summarize(
+    med = median(value / 1000),
+    .groups = "drop"
+  )
+
+#cut high tail off AFTER calc'ing medians to aid in viz
+IWAM_S_max_compare <- IWAM_S_max_compare |>
+  group_by(par) |>
+  filter(value <= quantile(value, 0.95, na.rm = TRUE)) 
+
+
+p <- ggplot(filter(IWAM_S_max_compare, par == "IWAM prior", SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.75) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "S_max (000s)") +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
+  scale_color_manual(values = c(
+    "IWAM prior" = "lightblue",
+    "AR1 prior" = "lightgrey", 
+    "IWAM posterior" = "steelblue", 
+    "AR1 posterior" = "darkgrey"), 
+    aesthetics  = c("colour", "fill")) +
   theme_sleek() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(), 
         legend.position = "bottom")
 
-ggplot(filter(IWAM_S_max_compare, par %in% c("IWAM_prior", "AR1_prior"), SMU == smu), aes(value/1000, color = par, fill = par)) +
-  geom_density(alpha = 0.5) +
+print(p)
+
+p <- ggplot(filter(IWAM_S_max_compare, par %in% c("IWAM prior", "AR1 prior"), SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.75) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "S_max (000s)") +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
+  scale_color_manual(values = c(
+    "IWAM prior" = "lightblue",
+    "AR1 prior" = "lightgrey", 
+    "IWAM posterior" = "steelblue", 
+    "AR1 posterior" = "darkgrey"), 
+    aesthetics  = c("colour", "fill")) +
   theme_sleek() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(), 
         legend.position = "bottom")
 
-ggplot(filter(IWAM_S_max_compare, par %in% c("IWAM_prior", "AR1_prior", "IWAM_posterior"), 
+print(p)
+
+p <- ggplot(filter(IWAM_S_max_compare, par %in% c("IWAM prior", "AR1 prior", "IWAM posterior"), 
                SMU == smu), aes(value/1000, color = par, fill = par)) +
-  geom_density(alpha = 0.5) +
+  geom_density(alpha = 0.75) +
+  geom_vline(data = filter(meds, par == "IWAM posterior"), 
+             aes(xintercept = med, color = par, fill = par), lty = 2) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "S_max (000s)") +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
+  scale_color_manual(values = c(
+    "IWAM prior" = "lightblue",
+    "AR1 prior" = "lightgrey", 
+    "IWAM posterior" = "steelblue", 
+    "AR1 posterior" = "darkgrey"), 
+    aesthetics  = c("colour", "fill")) +
   theme_sleek() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(), 
         legend.position = "bottom")
 
-ggplot(filter(IWAM_S_max_compare, SMU == smu), aes(value/1000, color = par, fill = par)) +
-  geom_density(alpha = 0.5) +
+print(p)
+
+p <- ggplot(filter(IWAM_S_max_compare, SMU == smu), aes(value/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.75) +
+  geom_vline(data = meds, aes(xintercept = med, color = par, fill = par), lty = 2) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "S_max (000s)") +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
+  scale_color_manual(values = c(
+    "IWAM prior" = "lightblue",
+    "AR1 prior" = "lightgrey", 
+    "IWAM posterior" = "steelblue", 
+    "AR1 posterior" = "darkgrey"), 
+    aesthetics  = c("colour", "fill")) +
   theme_sleek() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(), 
         legend.position = "bottom")
-```
+print(p)
 
-Then we'll simply compare $S_{Max}$ posteriors: 
-
-```{r IWAM posterior compare}
-
-
-ggplot(IWAM.post.compare, aes(Smsr/1000)) +
-    geom_density(aes(fill = fit, color = fit), alpha = 0.5) +
-  scale_fill_viridis_d() +
-  scale_color_viridis_d() +
-  facet_wrap(~CU, scales = "free") +
-  labs(x = "S_Max (000s)", fill = "", color = "") +
-  theme_sleek()
-
-
+}
 ```
 
 Then see what this means for the SR fit:
@@ -741,14 +772,49 @@ IWAM.SR.compare <- SR.preds |>
   mutate(fit = replace_na(fit, "IWAM-informed-AR1"))
 
 # SR fits ----
-ggplot() +
+
+for(smu in unique(IWAM.SR.compare$SMU)){
+  p <- ggplot() +
   geom_abline(intercept = 0, slope = 1,col="dark grey") +
-  geom_ribbon(data = IWAM.SR.compare, 
+  geom_ribbon(data = filter(IWAM.SR.compare, SMU == smu), 
               aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000, 
                   fill = fit,  colour=fit), alpha=0.5, linetype=2) +
-  geom_line(data = IWAM.SR.compare, 
+  geom_line(data = filter(IWAM.SR.compare, SMU == smu), 
             aes(x = Spawn/1000, y = Rec_med/1000, colour = fit)) +
+    scale_color_manual(values = c(
+    "IWAM-informed-AR1" = "steelblue", 
+    "AR1" = "darkgrey"), 
+    aesthetics  = c("colour", "fill")) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "Spawners (000s)", y = "Recruits (000s)") +
-  theme_sleek() 
+  theme_sleek() +
+    theme(legend.position = "bottom")
+  print(p)
+}
+```
+
+And $S_{MSY}$
+
+```{r IWAM Smsy compare}
+
+```
+
+# Aggregate plots 
+
+Some things for meetings.
+
+All CU's proudcitivty
+```{r prod-all}
+a.yrs.all |>
+  filter(!(CU %in% c("Skeena Aggregate", "Nass Aggregate")),  brood_year < max(a.yrs.all$brood_year)-a_max) |> # index fully observed rec
+  ggplot(aes(color=CU)) +
+  geom_line(aes(x = brood_year , y = mid), lwd = 1.5) +
+  scale_color_viridis_d() +
+  geom_hline(yintercept = 1, lty=2, col = "grey") +
+  labs(y ="Productivity (\U03B1)", x = "Brood year")+
+  guides(color=guide_legend(title="Stock")) +
+  scale_y_continuous(limits = c(0,8)) +
+  annotate("text", x = 1990, y = 1.5, label = "replacement", color = "grey") +
+  theme_sleek() +
+  theme(legend.position = "bottom") 
 ```
