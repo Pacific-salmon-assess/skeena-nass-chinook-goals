@@ -670,19 +670,18 @@ for(smu in unique(IWAM_S_max_compare$SMU)){
   cat('\n')
   cat("### ", smu, "\n")
   
-meds <- IWAM_S_max_compare %>%
-  filter(SMU == smu, par %in% c("IWAM posterior", "AR1 posterior")) %>%
-  group_by(CU, par) %>%
+meds <- IWAM_S_max_compare |>
+  filter(SMU == smu, par %in% c("IWAM posterior", "AR1 posterior")) |>
+  group_by(CU, par) |>
   summarize(
     med = median(value / 1000),
     .groups = "drop"
   )
 
-#cut high tail off AFTER calc'ing medians to aid in viz
+#cut upper tail off AFTER calc'ing medians to aid in viz
 IWAM_S_max_compare <- IWAM_S_max_compare |>
   group_by(par) |>
   filter(value <= quantile(value, 0.95, na.rm = TRUE)) 
-
 
 p <- ggplot(filter(IWAM_S_max_compare, par == "IWAM prior", SMU == smu), aes(value/1000, color = par, fill = par)) +
   geom_density(alpha = 0.75) +
@@ -796,7 +795,45 @@ for(smu in unique(IWAM.SR.compare$SMU)){
 And $S_{MSY}$
 
 ```{r IWAM Smsy compare}
+Smsy_compare <- select(IWAM.bench.posts, CU, Smsr) |>
+  left_join(CU_SMU, by = "CU") |>
+  mutate(par = "IWAM Smsy") |>
+  bind_rows(select(bench.posts, SMU, CU, Smsr) |>
+              mutate(par = "Smsy")) |>
+  filter(!(CU %in% c("Skeena Aggregate", "Nass Aggregate")))
 
+for(smu in unique(Smsy_compare$SMU)){
+  
+  meds <- Smsy_compare |>
+  filter(SMU == smu) |>
+  group_by(CU, par) |>
+  summarize(
+    med = median(Smsr/1000),
+    .groups = "drop"
+  )
+  #cut upper tail off AFTER calc'ing medians to aid in viz
+ sub_Smsy_compare <- Smsy_compare |>
+  group_by(par) |>
+  filter(Smsr <= quantile(Smsr, 0.95, na.rm = TRUE), 
+         SMU == smu) 
+  
+  p <- ggplot(sub_Smsy_compare, aes(Smsr/1000, color = par, fill = par)) +
+  geom_density(alpha = 0.75) +
+  facet_wrap(~CU, scales = "free") +
+  labs(x = "S_MSY (000s)") +
+  geom_vline(data = meds, aes(xintercept = med, color = par), lty = 2) +
+  scale_color_manual(values = c(
+    "IWAM Smsy" = "steelblue", 
+    "Smsy" = "darkgrey"), 
+    aesthetics  = c("colour", "fill")) +
+  theme_sleek() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        legend.title=element_blank(), 
+        legend.position = "bottom")
+
+print(p)
+}
 ```
 
 # Aggregate plots 

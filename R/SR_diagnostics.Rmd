@@ -157,7 +157,7 @@ for(i in unique(sp_har$CU)){
 
 # $S_{Max}$ prior  
 
-We used a prior for $S_{Max}$ that was a normal distribution with a mean 75% of the maximum observed spawners, with a standard deviation of 1.5 times the maximum observed spawners in a given CU. This restricted the $S_{Max}$ parameter space to a distribution that was "biologically reasonable" for the observed data.  
+We used a prior for $S_{Max}$ that was a normal distribution with a mean 50% of the maximum observed spawners, with a standard deviation of 2 times the maximum observed spawners in a given CU. This restricted the $S_{Max}$ parameter space to a distribution that was "biologically reasonable" for the observed data.  
 
 ```{r Smax prior-posterior}
 S_max_plot_data <- NULL
@@ -170,8 +170,8 @@ for(i in unique(sp_har$CU)){
   S_max_plot_data <- rbind(S_max_plot_data, 
                            data_frame(CU = rep(i, nrow(sub_AR1_pars$lnalpha)), 
                                       prior = rnorm(nrow(sub_AR1_pars$lnalpha), 
-                                                    max(sub_dat$spwn)*0.75, #values used for prior
-                                                    max(sub_dat$spwn)*1.5), 
+                                                    max(sub_dat$spwn)*0.5, #values used for prior
+                                                    max(sub_dat$spwn)*2), 
                                       posterior = sub_AR1_pars$S_max))
 }
 
