@@ -114,7 +114,7 @@ if(TRUE){
 
 #fit egg-mass  models--------------------------------------------------------------------
 
-#only going to do this for Upper Nass and Kitsumkalum to start
+#only going to do this for Upper Nass, Skeena aggregate and Kitsumkalum to start
 
 i = "Upper Nass"
 
