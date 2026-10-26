@@ -5,56 +5,7 @@ library(here)
 library(ggrepel)
 source(here("R/data_functions.R"))
 benchmarks <- read.csv(here("data/generated/bench_par_table_forTWG.4Aug2026.csv"))
-theme_sleek <- function(base_size = 11, base_family = "") {
-  half_line <- base_size/2
-  t <- theme_light(base_size = base_size, base_family = base_family) +
-    theme(
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      axis.ticks.length = unit(half_line / 2.2, "pt"),
-      strip.background = element_rect(fill = NA, colour = NA),
-      strip.text.x = element_text(colour = "grey30"),
-      strip.text.y = element_text(colour = "grey30"),
-      axis.text = element_text(colour = "grey30"),
-      axis.title = element_text(colour = "grey30"),
-      legend.title = element_text(colour = "grey30", size = rel(0.9)),
-      panel.border = element_rect(fill = NA, colour = "grey70", linewidth = 1),
-      legend.key.size = unit(0.9, "lines"),
-      legend.text = element_text(size = rel(0.7), colour = "grey30"),
-      legend.key = element_rect(colour = NA, fill = NA),
-      legend.background = element_rect(colour = NA, fill = NA),
-      plot.title = element_text(colour = "grey30", size = rel(1)),
-      plot.subtitle = element_text(colour = "grey30", size = rel(.85))
-    )
-}
 
-theme_sleek <- function(base_size = 11, base_family = "") {
-  half_line <- base_size/2
-
-  theme_light(base_size = base_size, base_family = base_family) +
-    theme(
-      panel.grid.major = element_line(
-        colour = "grey85",
-        linewidth = 0.3
-      ),
-      panel.grid.minor = element_blank(),
-
-      axis.ticks.length = unit(half_line / 2.2, "pt"),
-      strip.background = element_rect(fill = NA, colour = NA),
-      strip.text.x = element_text(colour = "grey30"),
-      strip.text.y = element_text(colour = "grey30"),
-      axis.text = element_text(colour = "grey30"),
-      axis.title = element_text(colour = "grey30"),
-      legend.title = element_text(colour = "grey30", size = rel(0.9)),
-      panel.border = element_rect(fill = NA, colour = "grey70", linewidth = 1),
-      legend.key.size = unit(0.9, "lines"),
-      legend.text = element_text(size = rel(0.7), colour = "grey30"),
-      legend.key = element_rect(colour = NA, fill = NA),
-      legend.background = element_rect(colour = NA, fill = NA),
-      plot.title = element_text(colour = "grey30", size = rel(1)),
-      plot.subtitle = element_text(colour = "grey30", size = rel(.85))
-    )
-}
 # Skeena -----
 agg_RR <- sp_har |>
   filter(CU == "Skeena Aggregate") |>
@@ -122,6 +73,24 @@ ggplot(data = agg_RR, aes(x = spwn, y = ER, col = year)) +
   theme_sleek() +
   geom_hline(yintercept = agg_Umsy$median, lty=2, col = "grey") +
   geom_vline(xintercept = agg_Smsy$median, lty=2, col = "grey") 
+
+# Skeena & Nass -----
+agg_RR <- sp_har |>
+  filter(CU %in% c("Skeena Aggregate","Nass Aggregate")) |>
+  mutate(Run = spwn + harv,
+         ER = harv/Run)
+
+
+ggplot(data = agg_RR, aes(x = Run, y = ER, col = year)) +
+  geom_point(size=3) +
+  labs(x = "Run-size", y = "Exploitation rate") +
+  coord_cartesian(ylim=c(0,1), xlim=c(0,NA)) +
+  facet_wrap(~CU, scales = "free_x") +
+  theme_sleek() +
+  geom_text_repel(aes(label = year), size=3)
+
+
+ggsave("plots/realized-HCR.jpeg", width = 10, height=4,units="in", dpi=600)
 
 # visualize hypothetical HRCs ----
 

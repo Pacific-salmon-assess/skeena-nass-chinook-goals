@@ -100,9 +100,11 @@ ggplot(lower_escapement, aes(x = year, y = `50%`)) +
 ggsave("plots/nass/lowerCU-reconstruction-infill.jpeg",width=7,height=5)
 
 
-ggplot(df |> pivot_longer(cols=c(Ishkeenickh:Upper_Nass),
+ggplot(df |> pivot_longer(cols=c(Ishkeenickh:Upper.Nass),
                           names_to = "Tributary",
-                          values_to = "Spawners"), aes(x = year, y = Spawners)) +
+                          values_to = "Spawners") |> 
+       mutate(Tributary = factor(Tributary, levels = c("Kitsault", "Kwinamass", "Ishkeenickh","Iknouk","Kincolith", "Khutzeeymateen", "Upper.Nass"))),
+       aes(x = year, y = Spawners)) +
   geom_line(size=1, color="grey30")+
   facet_wrap(~Tributary, scales = "free_y") +
   xlab("Year") +
