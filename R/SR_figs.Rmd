@@ -24,6 +24,8 @@ library(gsl)
 library(ggcorrplot)
 library(ggpubr)
 library(viridis)
+library(ggh4x) #for setting facet-scales on IWAM post plots 
+
 knitr::opts_chunk$set(echo = FALSE,warning = FALSE, message = FALSE, 
                       fig.width = 6,fig.height = 4, dpi = 300)
 ```
@@ -542,7 +544,17 @@ bench_plot <- filter(bench.par.table, SMU == "Nass", CU != "Nass Aggregate",
                      par %in% c("Sgen", "Smsy.80")) |>
   select(CU, par, median)
 
-ggplot(filter(AR1.spwn, SMU == "Nass", CU!= "Nass Aggregate"), aes(year, S.50/1000)) +
+tseax_spawners <- read.csv(here("data/Tseax-esc.csv")) |>
+  select(-X) |>
+  mutate(CU = "Tseax", 
+         SMU = "Nass")
+
+colnames(tseax_spawners) <- c("S.50", "S.5", "S.95", "year", "CU", "SMU")
+
+nass.spwn <- filter(AR1.spwn, SMU == "Nass", CU!= "Nass Aggregate") |>
+  bind_rows(tseax_spawners)
+
+ggplot(nass.spwn, aes(year, S.50/1000)) +
   geom_line() +
   geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), fill = "darkgrey", alpha = 0.5) +
   geom_hline(data = bench_plot, 
@@ -552,7 +564,7 @@ ggplot(filter(AR1.spwn, SMU == "Nass", CU!= "Nass Aggregate"), aes(year, S.50/10
                                  Sgen = "darkred"),
                       labels=c(Smsy.80 = expression(paste("80%", S[MSY])),
                                Sgen = expression(S[Gen]))) +
-  facet_wrap(~factor(CU, levels = nass_order), nrow = 2, scales = "free_y") +
+  facet_wrap(~factor(CU, levels = c("Lower Nass", "Tseax", "Upper Nass")), nrow = 3, scales = "free_y") +
   theme_sleek() +
   coord_cartesian(ylim = c(0,NA)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
@@ -669,7 +681,8 @@ for(smu in unique(IWAM_S_max_compare$SMU)){
 
   cat('\n')
   cat("### ", smu, "\n")
-  
+  cat('\n')
+
 meds <- IWAM_S_max_compare |>
   filter(SMU == smu, par %in% c("IWAM posterior", "AR1 posterior")) |>
   group_by(CU, par) |>
@@ -683,6 +696,16 @@ IWAM_S_max_compare <- IWAM_S_max_compare |>
   group_by(par) |>
   filter(value <= quantile(value, 0.95, na.rm = TRUE)) 
 
+# calc x axis limits by CU to keep lims the same across all plots 
+xmaxs <- IWAM_S_max_compare |>
+  filter(SMU == smu) |>
+  group_by(CU) |>
+  summarize(xmax = max(value / 1000, na.rm = TRUE), .groups = "drop")
+
+x_scales <- lapply(xmaxs$xmax, \(x) scale_x_continuous(limits = c(0, x)))
+
+names(x_scales) <- xmaxs$CU
+
 p <- ggplot(filter(IWAM_S_max_compare, par == "IWAM prior", SMU == smu), aes(value/1000, color = par, fill = par)) +
   geom_density(alpha = 0.75) +
   facet_wrap(~CU, scales = "free") +
@@ -694,6 +717,7 @@ p <- ggplot(filter(IWAM_S_max_compare, par == "IWAM prior", SMU == smu), aes(val
     "AR1 posterior" = "darkgrey"), 
     aesthetics  = c("colour", "fill")) +
   theme_sleek() +
+  ggh4x::facetted_pos_scales(x = x_scales) +  #only need this arg for this plot 
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
         legend.title=element_blank(), 
@@ -795,10 +819,10 @@ for(smu in unique(IWAM.SR.compare$SMU)){
 And $S_{MSY}$
 
 ```{r IWAM Smsy compare}
-Smsy_compare <- select(IWAM.bench.posts, CU, Smsr) |>
+Smsy_compare <- select(IWAM.bench.posts, CU, Smsy) |>
   left_join(CU_SMU, by = "CU") |>
   mutate(par = "IWAM Smsy") |>
-  bind_rows(select(bench.posts, SMU, CU, Smsr) |>
+  bind_rows(select(bench.posts, SMU, CU, Smsy) |>
               mutate(par = "Smsy")) |>
   filter(!(CU %in% c("Skeena Aggregate", "Nass Aggregate")))
 
@@ -808,16 +832,16 @@ for(smu in unique(Smsy_compare$SMU)){
   filter(SMU == smu) |>
   group_by(CU, par) |>
   summarize(
-    med = median(Smsr/1000),
+    med = median(Smsy/1000),
     .groups = "drop"
   )
   #cut upper tail off AFTER calc'ing medians to aid in viz
  sub_Smsy_compare <- Smsy_compare |>
   group_by(par) |>
-  filter(Smsr <= quantile(Smsr, 0.95, na.rm = TRUE), 
+  filter(Smsy <= quantile(Smsy, 0.95, na.rm = TRUE), 
          SMU == smu) 
   
-  p <- ggplot(sub_Smsy_compare, aes(Smsr/1000, color = par, fill = par)) +
+  p <- ggplot(sub_Smsy_compare, aes(Smsy/1000, color = par, fill = par)) +
   geom_density(alpha = 0.75) +
   facet_wrap(~CU, scales = "free") +
   labs(x = "S_MSY (000s)") +
