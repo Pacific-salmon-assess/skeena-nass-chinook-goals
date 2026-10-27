@@ -904,5 +904,5 @@ ggplot(ag.spwn, aes(year, S.50/1000)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Retun Year", y = "Spawners (000s)", col = "")
 
-
+my.ggsave(here("plots/spawners-benchmarks.png"))
 ```
