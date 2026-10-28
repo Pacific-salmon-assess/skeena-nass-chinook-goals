@@ -334,14 +334,14 @@ ggplot(bench_egg_mass_long |> filter(par=="Smsy") ,aes(value, fill = period, col
 ggsave("plots/skeena/kitsumkalum-demographic-Smsy-post.jpeg",width=7,height=5)
 
 
-# Upper Nass ----
+# Nass Aggregate----
 male_S_comps <- read.csv(here("data/Nass_male_age_comps.csv"))[,3:5] |> # male spawner age composition
   mutate(X6 = replace_na(X6, 0))
 
 fem_S_comps <- read.csv(here("data/Nass_fem_age_comps.csv"))[,3:5] # female spawner age composition
 fem_egg_mass_comps <- read.csv(here("data/Nass_fem_age_eggg_mass.csv"))[,2:4] # female spawner egg mass by age
 
-AR1.EM.fit <- readRDS("data/generated/model_fits/EM/Upper Nass_EM.rds")
+AR1.EM.fit <- readRDS("data/generated/model_fits/EM/Nass Aggregate_EM.rds")
 
 bench_AR1_eggs <- NULL
 ER.pred <- NULL
@@ -349,7 +349,7 @@ brood.all <- NULL
 a.yrs.all <- NULL
 demo.par.summary.out <- NULL
 
-sub_dat <- filter(sp_har, CU=="Upper Nass")
+sub_dat <- filter(sp_har, CU=="Nass Aggregate")
 a_min <- 4
 a_max <- 6
 nyrs <- max(sub_dat$year)-min(sub_dat$year)+1 #number of calendar years of observations
@@ -404,7 +404,7 @@ ggplot() +
   labs(x = "Egg mass (00 kgs)", y = "Recruits (000s)") +
   theme_sleek()
 
-ggsave("plots/nass/upper-nass-EMR.jpeg",width=7,height=5)
+ggsave("plots/nass/nass-aggregate-EMR.jpeg",width=7,height=5)
 
 #benchmarks based on early demographics
 bench_early <- matrix(NA,length(EM_pars$lnalpha),2,
@@ -489,13 +489,23 @@ bench_egg_mass_long_summary <- bench_egg_mass_long |>
 
 ggplot(bench_egg_mass_long |> filter(par=="Smsy") ,aes(value, fill = period, color = period)) +
   geom_density(alpha = 0.8, adjust = 4) +
-  scale_fill_brewer(palette = "Dark2") +
-  scale_color_brewer(palette = "Dark2") +
-  theme_sleek() +
-  coord_cartesian(xlim = c(0,15000)) +
-  xlab("Smsy") 
+  coord_cartesian(xlim = c(4000,17000)) +
+  xlab("Smsy") +
+  scale_fill_brewer(palette = "Dark2",
+                    labels = c(
+                      "avg" = "1994-2025", 
+                      "early" = "1994-1999", 
+                      "recent" = "2020-2025"
+                    )) +
+  scale_color_brewer(palette = "Dark2",
+                     labels = c(
+    "avg" = "1994-2025", 
+    "early" = "1994-1999", 
+    "recent" = "2020-2025"
+  )) +
+  theme_sleek()
 
-ggsave("plots/nass/upper-nass-demographic-Smsy-post.jpeg",width=7,height=5)
+ggsave("plots/nass/nass-aggregate-demographic-Smsy-post.jpeg",width=7,height=5)
 
 
 
@@ -505,7 +515,7 @@ source(here("R/SR_posterior_processing.R")) #can take some time
 
 ggplot() +
   geom_abline(intercept = 0, slope = 1,col="dark grey") +
-  geom_ribbon(data = filter(SR.preds, CU == "Upper Nass"), 
+  geom_ribbon(data = filter(SR.preds, CU == "Nass Aggregate"), 
               aes(x = Spawn/1000, ymin = Rec_lwr/1000, ymax = Rec_upr/1000),
               fill = "grey80", alpha=0.5, linetype=2, colour="gray46") +
   geom_errorbar(data = filter(brood.all, CU == "Upper Nass"), 
@@ -520,9 +530,10 @@ ggplot() +
             aes(x = Spawn/1000, y = Rec_med/1000)) +
   scale_colour_viridis_c(name = "Brood Year")+
   labs(x = "Spawners (000s)", y = "Recruits (000s)") +
+  coord_cartesian(xlim = c(0,33)) +
   theme_sleek()
 
-ggsave("plots/nass/upper-nass-SR.jpeg",width=7,height=5)
+ggsave("plots/nass/nass-aggregate-SR.jpeg",width=7,height=5)
 
 ggplot() +
   geom_abline(intercept = 0, slope = 1,col="dark grey") +

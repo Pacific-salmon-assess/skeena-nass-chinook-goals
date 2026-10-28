@@ -103,10 +103,17 @@ ggsave("plots/nass/lowerCU-reconstruction-infill.jpeg",width=7,height=5)
 ggplot(df |> pivot_longer(cols=c(Ishkeenickh:Upper.Nass),
                           names_to = "Tributary",
                           values_to = "Spawners") |> 
-       mutate(Tributary = factor(Tributary, levels = c("Kitsault", "Kwinamass", "Ishkeenickh","Iknouk","Kincolith", "Khutzeeymateen", "Upper.Nass"))),
+       mutate(Tributary_names = case_when(Tributary == "Kitsault" ~"Kitsault",
+                                          Tributary == "Kwinamass" ~"Ksi X'anmas (Kwinamass)",
+                                          Tributary == "Ishkeenickh" ~"Ksi Hlginx (Ishkeenickh)",
+                                          Tributary == "Iknouk" ~"Xnukw (Iknouk)",
+                                          Tributary == "Kincolith" ~"Gingolx (Kincolith)",
+                                          Tributary == "Upper.Nass" ~"Upper Nass",
+                                          Tributary == "Khutzeeymateen" ~"Khutzeeymateen"),
+              Tributary_names = factor(Tributary_names, levels = c("Kitsault", "Ksi X'anmas (Kwinamass)", "Ksi Hlginx (Ishkeenickh)","Xnukw (Iknouk)","Gingolx (Kincolith)", "Khutzeeymateen", "Upper Nass"))),
        aes(x = year, y = Spawners)) +
   geom_line(size=1, color="grey30")+
-  facet_wrap(~Tributary, scales = "free_y") +
+  facet_wrap(~Tributary_names, scales = "free_y") +
   xlab("Year") +
   theme_sleek()
 ggsave("plots/nass/lowerCU-tribs.jpeg",width=7,height=5)
@@ -165,6 +172,8 @@ h <- ggplot(data.frame(x = aerial_exp), aes(x = aerial_exp)) +
 lower_cont = rbeta(10000,1.3951783 ,13.5421138)
 g <- ggplot(data.frame(x = lower_cont), aes(x = lower_cont)) +
   geom_density(fill = "dark grey", size = 0.5) +
+  geom_vline(aes(xintercept = median(lower_cont)), 
+             color = "red", linetype = "dashed", size = 1)
   labs(title = "Lower CU vs agg. Nass ", x = "Contribution", y = "") +
   theme_sleek()+
   theme(axis.text.y = element_blank())

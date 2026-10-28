@@ -116,7 +116,7 @@ if(TRUE){
 
 #only going to do this for Upper Nass, Skeena aggregate and Kitsumkalum to start
 
-i = "Upper Nass"
+i = "Nass Aggregate"
 
 sp_har1 <- filter(sp_har, CU == i)
 
