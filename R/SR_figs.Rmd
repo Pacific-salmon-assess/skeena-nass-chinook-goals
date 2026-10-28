@@ -879,3 +879,30 @@ a.yrs.all |>
   theme_sleek() +
   theme(legend.position = "bottom") 
 ```
+
+```{r ag spawner timeseries}
+bench_plot <- filter(bench.par.table, !(CU %in% c("Skeena Aggregate", "Nass Aggregate")),
+                     par %in% c("Sgen", "Smsy.80")) |>
+  select(CU, par, median)
+
+ag.spwn <- filter(AR1.spwn, !(CU %in% c("Skeena Aggregate", "Nass Aggregate"))) |>
+  bind_rows(tseax_spawners)
+
+ggplot(ag.spwn, aes(year, S.50/1000)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), fill = "darkgrey", alpha = 0.5) +
+  geom_hline(data = bench_plot, 
+             aes(yintercept = median/1000, col = par), lty = "dashed") +
+  geom_vline(xintercept = max(AR1.spwn$year)- a_max, lwd = 0.5, lty = 2) +
+    scale_colour_manual(values=c(Smsy.80 = "forestgreen", 
+                                 Sgen = "darkred"),
+                      labels=c(Smsy.80 = expression(paste("80%", S[MSY])),
+                               Sgen = expression(S[Gen]))) +
+  facet_wrap(~factor(CU, levels = c(skeena_order, "Lower Nass", "Tseax", "Upper Nass")), nrow = 3, scales = "free_y") +
+  theme_sleek() +
+  coord_cartesian(ylim = c(0,NA)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Retun Year", y = "Spawners (000s)", col = "")
+
+my.ggsave(here("plots/spawners-benchmarks.png"))
+```
