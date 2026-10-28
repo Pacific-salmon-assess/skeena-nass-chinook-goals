@@ -108,7 +108,7 @@ ggplot() +
   theme_sleek()
 ```
 
-Latent (i.e., hidden) states of spawners and recruits fir in the spawner-recruit model  
+Latent (i.e., hidden) states of spawners and recruits for in the spawner-recruit model  
 ```{r latent states}
 ggplot(filter(AR1.spwn, SMU == "Skeena"), aes(year, S.50/1000)) +
   geom_ribbon(aes(ymin = S.25/1000, ymax = S.75/1000), 
@@ -264,7 +264,7 @@ ggplot(filter(AR1.spwn, SMU == "Skeena", CU != "Skeena Aggregate"), aes(year, S.
   facet_wrap(~factor(CU, levels = skeena_order), scales = "free_y") +
   theme_sleek() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Retun Year", y = "Spawners (000s)", col = "")
+  labs(x = "Return Year", y = "Spawners (000s)", col = "")
 ```
 
 ```{r bench-posts}
@@ -362,6 +362,27 @@ ggplot(filter(sp_har_fig, SMU == "Nass"), aes(year, harv/1000)) +
   facet_wrap(~factor(CU, levels = nass_order), scales = "free_y") +
   theme_sleek() +
   labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
+```
+
+```{r stacked-ER}
+catch_esc <- sp_har |>
+  select(year, SMU, CU, harv, spwn) |>
+  pivot_longer(c(harv, spwn), names_to = "type", values_to = "n")
+
+ sp_har <- sp_har |>
+  mutate(ER = harv/(harv+spwn))
+  
+ggplot(filter(catch_esc, SMU == "Nass"), aes(x = year, y = n/1000)) +
+  geom_bar(position="stack", stat="identity", aes(fill = type)) +
+  geom_line(data = filter(sp_har, SMU == "Nass"), aes(x=year, y = ER*60), color = "red", lwd = 1) +   #ADD ER to plot
+  scale_fill_manual(values = c("darkgrey", "black"), name = "Return type") +
+  scale_y_continuous(sec.axis = sec_axis(~(./60)*100, name = "Exploitation Rate (%)")) + #transform back
+  theme_sleek() +
+  labs(x = "Return year",
+       y = "Total return (thousands of fish)") +
+  facet_wrap(~factor(CU, levels = c("Lower Nass", "Upper Nass", "Nass Aggregate")), nrow = 3)
+
+my.ggsave(here("plots/nass_esc_har.png"))
 ```
 
 ```{r age props nass}
@@ -568,7 +589,7 @@ ggplot(nass.spwn, aes(year, S.50/1000)) +
   theme_sleek() +
   coord_cartesian(ylim = c(0,NA)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Retun Year", y = "Spawners (000s)", col = "")
+  labs(x = "Return Year", y = "Spawners (000s)", col = "")
 ```
 
 ```{r bench-posts nass}
@@ -902,7 +923,7 @@ ggplot(ag.spwn, aes(year, S.50/1000)) +
   theme_sleek() +
   coord_cartesian(ylim = c(0,NA)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Retun Year", y = "Spawners (000s)", col = "")
+  labs(x = "Return Year", y = "Spawners (000s)", col = "")
 
 my.ggsave(here("plots/spawners-benchmarks.png"))
 ```
