@@ -70,6 +70,29 @@ ggplot(filter(sp_har_fig, SMU == "Skeena"), aes(year, harv/1000)) +
   labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
 ```
 
+```{r Skeena-stacked-ER}
+if(FALSE){
+catch_esc <- sp_har |>
+  select(year, SMU, CU, harv, spwn) |>
+  pivot_longer(c(harv, spwn), names_to = "type", values_to = "n")
+
+ sp_har <- sp_har |>
+  mutate(ER = harv/(harv+spwn))
+  
+ggplot(filter(catch_esc, SMU == "Skeena"), aes(x = year, y = n/1000)) +
+  geom_bar(position="stack", stat="identity", aes(fill = type)) +
+  geom_line(data = filter(sp_har, SMU == "Skeena"), aes(x=year, y = ER*60), color = "red", lwd = 1) +   #ADD ER to plot
+  scale_fill_manual(values = c("darkgrey", "black"), name = "Return type") +
+  scale_y_continuous(sec.axis = sec_axis(~(./60)*100, name = "Exploitation Rate (%)")) + #transform back
+  theme_sleek() +
+  labs(x = "Return year",
+       y = "Total return (thousands of fish)") +
+  facet_wrap(~factor(CU, levels = skeena_order))
+
+my.ggsave(here("plots/skeena_esc_har.png"))
+}
+```
+
 ```{r age props}
 prop_age |>
   pivot_longer(4:6, names_to = "age") |>
@@ -364,7 +387,7 @@ ggplot(filter(sp_har_fig, SMU == "Nass"), aes(year, harv/1000)) +
   labs(x = "Return year", y = "Harvest (000s) and 50th percentile")
 ```
 
-```{r stacked-ER}
+```{r Nass-stacked-ER}
 catch_esc <- sp_har |>
   select(year, SMU, CU, harv, spwn) |>
   pivot_longer(c(harv, spwn), names_to = "type", values_to = "n")
