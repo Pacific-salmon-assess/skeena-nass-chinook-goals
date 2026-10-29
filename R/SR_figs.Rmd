@@ -366,6 +366,43 @@ c <- ggplot(filter(bench_compare, par %in% c("Seq", "Smsr")),
 cowplot::plot_grid(a, b, labels="auto", ncol=1,rel_heights=c(0.6,1))
 ```
 
+Kobe plot 
+```{r skeena kobe}
+if(FALSE){ #old pink code - gotta reshape for skeena aggregate
+kobe_df <- data.frame(S = spwn_df$mid,
+                      S_LCI = spwn_df$lwr,
+                      S_UCI = spwn_df$upr,
+                      U = er_df$mid,
+                      U_LCI = er_df$lwr,
+                      U_UCI = er_df$upr,
+                      year = spwn_df$year) |>
+  #index benchmarks table
+  mutate(U_Umsy = round(U/Umsy ,2),
+         U_Umsy_LCI = round(U_LCI/Umsy ,2),
+         U_Umsy_UCI = round(U_UCI/Umsy ,2),
+         S_Smsy = round(S/(Smsy.8*1.25), 2), #correct from 80%Smsy to Smsy
+         S_Smsy_LCI = round(S_LCI/(Smsy.8*1.25), 2),
+         S_Smsy_UCI = round(S_UCI/(Smsy.8*1.25), 2))
+
+ggplot(kobe_df, aes(S_Smsy, U_Umsy)) +
+  #draw data and error bars on final year
+  geom_point(aes(color = year), size=4) +
+  geom_errorbar(data = filter(kobe_df, year == max(kobe_df$year)),
+                aes(x = S_Smsy, ymin = U_Umsy_LCI, ymax = U_Umsy_UCI), width = 0) +
+  geom_errorbarh(data = filter(kobe_df, year == max(kobe_df$year)),
+                 aes(y = U_Umsy, xmin = S_Smsy_LCI, xmax = S_Smsy_UCI), height = 0) +
+  #add "crosshairs"
+  geom_vline(xintercept = 1, lty = 2) +
+  geom_hline(yintercept = 1, lty = 2) +
+  geom_text(data = filter(kobe_df, year== min(kobe_df$year)|year== max(kobe_df$year)),
+            aes(x = S_Smsy, y = U_Umsy, label = c("'59", "'23")), #CHANGE THESE WITH NEW DATA!
+            hjust = 0-.2, vjust = 0-.2) +
+  scale_colour_viridis_c(name="Year",
+                         labels = c("1961", "'81", "'01", "'21")) +
+  labs(y="U/Umsy", x= "S/Smsy") +
+  theme(legend.position = "bottom")
+}
+```
 # Nass  
 
 ## Data   
